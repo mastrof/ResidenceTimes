@@ -7,5 +7,6 @@ using MicrobeAgents
 using StaticArrays
 
 include("concentration_field.jl")
+include("model.jl")
 
 end # module
