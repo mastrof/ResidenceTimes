@@ -15,7 +15,7 @@ function setup_abm(;
     Drot=0.035, # rotational diffusivity (rad^2/s)
     Π=0.0, # chemotactic precision
     β=5.0, # chemotactic gain
-    τm=1.0, # chemotactic memory time (s)
+    τm=1.3, # chemotactic memory time (s)
 )
     space = ContinuousSpace(fill(L, SVector{3}); periodic)
     origin = fill(L/2, SVector{3})
