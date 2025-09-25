@@ -9,6 +9,7 @@ using CSV
 using DataFrames
 
 include("wsave.jl")
+include("reader.jl")
 include("concentration_field.jl")
 include("model.jl")
 
