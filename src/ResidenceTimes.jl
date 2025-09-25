@@ -5,7 +5,10 @@ using LinearAlgebra
 using Agents
 using MicrobeAgents
 using StaticArrays
+using CSV
+using DataFrames
 
+include("wsave.jl")
 include("concentration_field.jl")
 include("model.jl")
 
