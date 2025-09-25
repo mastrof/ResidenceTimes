@@ -1,16 +1,39 @@
 export collect_datasets
 
-function collect_datasets(folder; rinclude=[r""], rexclude=[r"^\b$"])
+"""
+    collect_datasets(folder; rinclude, rexclude, kwargs...)
+Read CSV files in folder and load them as a single dataframe.
+Parameter values in the filenames are included as dataframe columns.
+The `rinclude` and `rexclude` keywords can be used to filter filenames:
+only datasets that match all `rinclude` regexes and none of the `rexclude`
+are loaded.
+
+Additional kwargs can be used as a more convenient way to filter
+datasets based on parameter values.
+Any kwarg of the form `key=val` is processed as a regex
+so that only datasets where the parameter `key` has value `val`
+will be loaded.
+"""
+function collect_datasets(folder;
+    rinclude::AbstractVector{Regex}=[r""],
+    rexclude::AbstractVector{Regex}=[r"^\b$"], 
+    kwargs...
+)
     valid_filetypes = [".csv"]
     load_function = (filename) -> CSV.read(joinpath(folder, filename), DataFrame)
     filelist = readdir(folder)
     filter!(filename -> is_valid_file(filename, valid_filetypes), filelist)
+    if !isempty(kwargs)
+        for (k,v) in zip(keys(kwargs), values(kwargs))
+            push!(rinclude, Regex("$(k)=$(v)[^0-9]"))
+        end
+    end
     if (rinclude == [r""] && rexclude == [r"^\b$"]) == false
         idx_filt = Int[]
         for i in eachindex(filelist)
             file = filelist[i]
-            include_bool = any(!isnothing(match(rgx, file)) for rgx in rinclude)
-            exclude_bool = any(!isnothing(match(rgx, file)) for rgx in rexclude)
+            include_bool = all(!isnothing(match(rgx, file)) for rgx in rinclude)
+            exclude_bool = all(!isnothing(match(rgx, file)) for rgx in rexclude)
             if !include_bool || exclude_bool
                 push!(idx_filt, i)
             end
