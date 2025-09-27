@@ -49,13 +49,13 @@ function gradient_exp(pos, model)
     Cs = chemo.Cs
     R = chemo.radius
     P = chemo.origin
-    γ = chemo.gl
+    γ = chemo.γ
     rvec = distancevector(P, pos, model)
     r2 = dot(rvec, rvec)
     r = sqrt(r2)
     r3 = r * r2
     return SVector{3}(
-        -(γ+x)*Cs*exp(-(x-R)/γ) / (γ*r3) * x
+        -(γ+r)*Cs*exp(-(r-R)/γ) / (γ*r3) * x
         for x in rvec
     )
 end
