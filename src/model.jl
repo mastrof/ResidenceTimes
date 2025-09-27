@@ -13,8 +13,9 @@ function setup_abm(;
     U=45.0, # swimming speed (μm/s)
     λ=2.2, # reorientation rate (1/s)
     Drot=0.035, # rotational diffusivity (rad^2/s)
-    Π=0.0, # chemotactic precision
-    β=5.0, # chemotactic gain
+    Π=6.0, # chemotactic precision
+    Γ=50.0, # chemotactic gain
+    κ=50.0, # receptor gain (1/μM)
     τm=1.3, # chemotactic memory time (s)
 )
     space = ContinuousSpace(fill(L, SVector{3}); periodic)
@@ -24,7 +25,7 @@ function setup_abm(;
         :chemoattractant => chemo
     )
     N = (mot == "RT" ? 2 : 4)
-    model = StandardABM(Celani{3,N}, space, dt;
+    model = StandardABM(Brumley{3,N}, space, dt;
         properties,
         container=Vector,
     )
@@ -40,7 +41,8 @@ function setup_abm(;
             motility,
             rotational_diffusivity=Drot,
             chemotactic_precision=Π,
-            gain=β,
+            gain=Γ,
+            gain_receptor=κ,
             memory=τm,
         )
     end
