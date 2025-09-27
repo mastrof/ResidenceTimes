@@ -25,7 +25,7 @@ function collect_datasets(folder;
     filter!(filename -> is_valid_file(filename, valid_filetypes), filelist)
     if !isempty(kwargs)
         for (k,v) in zip(keys(kwargs), values(kwargs))
-            push!(rinclude, Regex("$(k)=$(v)[^0-9]"))
+            push!(rinclude, Regex("$(k)=$(v)[^a-zA-Z0-9]"))
         end
     end
     if (rinclude == [r""] && rexclude == [r"^\b$"]) == false
