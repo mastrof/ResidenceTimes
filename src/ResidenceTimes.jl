@@ -8,6 +8,7 @@ using StaticArrays
 using CSV
 using DataFrames
 
+include("utils.jl")
 include("wsave.jl")
 include("reader.jl")
 include("concentration_field.jl")
