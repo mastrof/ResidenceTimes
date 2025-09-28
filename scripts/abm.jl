@@ -12,7 +12,7 @@ mot = ["RT", "RR", "RRF"]
 dt = [0.1] # s
 U = [25, 45] # μm/s
 L = [1000] # μm
-Cs = [0, 1, 5] # μM
+Cs = [0, 0.1, 1, 5] # μM
 allparams = @strdict R mot dt U L Cs
 dicts = dict_list(allparams)
 
@@ -33,9 +33,9 @@ dicts = dict_list(allparams)
     c(a) = _c(a) # HACK: somehow necessary for correct naming
     adata = [r, c]
     # do not collect during first 30 minutes equilibration
-    # then collect every 20 seconds
-    when(model, t) = t >= 18_000 && t % 200 == 0
-    adf, = run!(model, nsteps; adata, when) # = every 10s
+    # then collect every minute
+    when(model, t) = t >= 18_000 && t % 600 == 0
+    adf, = run!(model, nsteps; adata, when)
     # rename because local functions don't respect names
     colnames = names(adf)
     rename!(adf,
