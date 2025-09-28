@@ -49,6 +49,6 @@ pmap(dicts) do config
     @show config
     data = run_abm(config)
     on_cluster = haskey(ENV, "SCRATCH")
-    fileout = datadir("brumley", savename(config, "csv"); on_cluster)
+    fileout = datadir("brumley", savename("abm", config, "csv"); on_cluster)
     wsave(fileout, data)
 end
