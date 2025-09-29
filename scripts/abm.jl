@@ -21,7 +21,7 @@ dicts = dict_list(allparams)
     @unpack R, mot, dt, U, L, Cs, Cb = config
     γ = 150
     model = setup_abm(; R, mot, dt, U, L, Cs, Cb, γ, n=50_000)
-    simtime = 60 # minutes
+    simtime = 75 # minutes
     nsteps = round(Int, simtime * 60 / dt)
     # radial distance from source
     r(a) = distance(a, chemoattractant(model).origin, model)
@@ -33,8 +33,8 @@ dicts = dict_list(allparams)
     c(a) = _c(a) # HACK: somehow necessary for correct naming
     adata = [r, c]
     # do not collect during first 30 minutes equilibration
-    # then collect every minute
-    when(model, t) = t >= 18_000 && t % 600 == 0
+    # then collect every 45 seconds
+    when(model, t) = t >= 18_000 && t % 450 == 0
     adf, = run!(model, nsteps; adata, when)
     # rename because local functions don't respect names
     colnames = names(adf)
