@@ -40,7 +40,7 @@ function field_exp(pos, model)
     R = chemo.radius
     P = chemo.origin
     γ = chemo.γ
-    r = distance(pos, P, model)
+    r = max(distance(pos, P, model), R)
     return Cb + Cs*R*exp(-(r-R)/γ) / r
 end
 
@@ -52,8 +52,8 @@ function gradient_exp(pos, model)
     γ = chemo.γ
     rvec = distancevector(P, pos, model)
     r2 = dot(rvec, rvec)
-    r = sqrt(r2)
-    r3 = r * r2
+    r = max(sqrt(r2), R)
+    r3 = r * r * r
     return SVector{3}(
         -(γ+r)*Cs*exp(-(r-R)/γ) / (γ*r3) * x
         for x in rvec
