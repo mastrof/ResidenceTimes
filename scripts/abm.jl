@@ -10,15 +10,16 @@ end
 R = [1, 3, 10] # μm
 mot = ["RT", "RR", "RRF"]
 dt = [0.1] # s
-U = [25, 45] # μm/s
+U = [10, 20, 40] # μm/s
+λ = [2.2, 0.5] # 1/s
 L = [1000] # μm
-Cs = [0, 0.1, 1, 5] # μM
+Cs = [0, 0.1, 1, 3] # μM
 Cb = [0.03] # μM
-allparams = @strdict R mot dt U L Cs Cb
+allparams = @strdict R mot dt U λ L Cs Cb
 dicts = dict_list(allparams)
 
 @everywhere function run_abm(config::Dict)
-    @unpack R, mot, dt, U, L, Cs, Cb = config
+    @unpack R, mot, dt, U, λ, L, Cs, Cb = config
     γ = 150
     model = setup_abm(; R, mot, dt, U, L, Cs, Cb, γ, n=50_000)
     simtime = 75 # minutes
