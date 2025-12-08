@@ -21,7 +21,7 @@ dicts = dict_list(allparams)
 @everywhere function run_abm(config::Dict)
     @unpack R, mot, dt, U, λ, L, Cs, Cb = config
     γ = 150
-    model = setup_abm(; R, mot, dt, U, L, Cs, Cb, γ, n=50_000)
+    model = setup_abm(; R, mot, dt, U, λ, L, Cs, Cb, γ, n=50_000)
     simtime = 75 # minutes
     nsteps = round(Int, simtime * 60 / dt)
     # radial distance from source
