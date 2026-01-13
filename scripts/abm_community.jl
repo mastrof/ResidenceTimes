@@ -29,7 +29,9 @@ dicts = dict_list(allparams)
     adata = [c]
     # do not collect during first 15 minutes equilibration
     # then collect every 15 seconds
-    when(model, t) = t >= 0*6_000 && t % 150 == 0
+    eqtime = round(Int, 15*60 / dt)
+    sampletime = round(Int, 15 / dt)
+    when(model, t) = t >= eqtime && t % sampletime == 0
     adf, = run!(model, nsteps; adata, when)
     # rename because local functions don't respect names
     colnames = names(adf)
