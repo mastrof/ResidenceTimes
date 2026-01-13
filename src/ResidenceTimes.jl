@@ -7,6 +7,7 @@ using MicrobeAgents
 using StaticArrays
 using CSV
 using DataFrames
+using Random
 
 include("utils.jl")
 include("wsave.jl")
