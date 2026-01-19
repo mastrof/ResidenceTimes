@@ -106,11 +106,13 @@ function setup_abm_community(;
 end
 
 using IterTools: partition
+using StatsBase: geomean
 using BubbleBath
 function generate_community(space, α, Aphy, Rmin, Rmax, PER; rng=Xoshiro(1))
-    sizeclasses = partition(logrange(Rmin, Rmax; length=4), 2, 1) # 3 bins
+    Nclasses = 7
+    sizeclasses = partition(logrange(Rmin, Rmax; length=Nclasses+1), 2, 1)
     # geometric mean of radii rounded to first decimal for convenience
-    rs = round.(sigdigits=2, map(r -> sqrt(r[1]*r[2]), sizeclasses))
+    rs = round.(sigdigits=2, geomean.(sizeclasses))
     Nrel = map(r -> 1/r^(3α), rs) # relative abundance in each size class
     vol = prod(spacesize(space)) * 1e-12 # domain volume in mL
     Nperml = Nrel ./ sum(Nrel) .* Aphy # abundance per mL
