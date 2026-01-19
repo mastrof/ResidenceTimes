@@ -9,13 +9,13 @@ end
 
 mot = ["RRF"]
 dt = [0.1] # s
-U = [10, 40] # μm/s
+U = [10, 20, 40] # μm/s
 λ = [2.2] # 1/s
-L = [1000] # μm
-PER = [0.5]
+L = [1500] # μm
+PER = [0.2, 0.5]
 Cb = [0.03] # μM
 α = [0.85]
-Aphy = Int.([3e5, 1e6, 5e6]) # cells/mL
+Aphy = Int.([8e4]) # cells/mL
 allparams = @strdict mot dt U λ L PER Cb α Aphy
 dicts = dict_list(allparams)
 
@@ -25,12 +25,12 @@ dicts = dict_list(allparams)
     model = setup_abm_community(; mot, dt, U, λ, L, α, Aphy, PER, Cb, γ, n=50_000)
     simtime = 60 # minutes
     nsteps = round(Int, simtime * 60 / dt)
-    c(a) = concentration(model)(position(a), model)
+    c(a) = concentration(model)(position(a), model) - Cb
     adata = [c]
     # do not collect during first 15 minutes equilibration
-    # then collect every 30 seconds
+    # then collect every 45 seconds
     eqtime = round(Int, 15*60 / dt)
-    sampletime = round(Int, 30 / dt)
+    sampletime = round(Int, 45 / dt)
     when(model, t) = t >= eqtime && t % sampletime == 0
     adf, = run!(model, nsteps; adata, when)
     # rename because local functions don't respect names
