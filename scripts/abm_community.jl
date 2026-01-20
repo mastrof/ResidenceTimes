@@ -11,11 +11,11 @@ mot = ["RRF"]
 dt = [0.1] # s
 U = [10, 20, 40] # μm/s
 λ = [2.2] # 1/s
-L = [1500] # μm
-PER = [0.2, 0.5]
+L = [1000] # μm
+PER = [0.3, 0.5]
 Cb = [0.03] # μM
 α = [0.85]
-Aphy = Int.([8e4]) # cells/mL
+Aphy = Int.([3e5]) # cells/mL
 allparams = @strdict mot dt U λ L PER Cb α Aphy
 dicts = dict_list(allparams)
 
@@ -45,6 +45,10 @@ pmap(dicts) do config
     @show config
     data = run_abm(config)
     on_cluster = haskey(ENV, "SCRATCH")
-    fileout = datadir("comm", savename("comm", config, "csv"); on_cluster)
+    fileout = datadir(
+        "comm_7classes",
+        savename("comm", config, "csv");
+        on_cluster
+    )
     wsave(fileout, data)
 end
