@@ -1096,9 +1096,9 @@ version = "0.7.2"
 
 [[deps.MicrobeAgents]]
 deps = ["Agents", "Autocorrelations", "DataFrames", "Distributions", "GeometryBasics", "LightSumTypes", "LinearAlgebra", "MeanSquaredDisplacement", "Quaternions", "Random", "StaticArrays", "StatsBase"]
-git-tree-sha1 = "661725cf11dd9c14bc5f3a421a32cce188e2fe01"
+git-tree-sha1 = "e87e03d6985c0c9dce651061ee4caa50269d6e41"
 uuid = "b17a4bac-8667-4a2d-84f7-1883ae0b8dbb"
-version = "0.6.0"
+version = "0.6.1"
 
 [[deps.Missings]]
 deps = ["DataAPI"]
