@@ -81,7 +81,7 @@ function setup_abm_community(;
         xpositions=zeros(SVector{3,Float64}, n),
         ypositions=phytoplankton_positions,
         unitcell=spacesize(space),
-        cutoff=3γ,
+        cutoff=2.5γ,
         output=OutCommField(zeros(n), zeros(SVector{3,Float64}, n)),
         output_name=:measurements,
         parallel=false
