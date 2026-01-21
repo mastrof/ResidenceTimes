@@ -2,7 +2,7 @@
 
 julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "8c32b8fa7372c5744d1dd690f4667def11c6b6c7"
+project_hash = "cb536a25f65eafeae0b1f5f98f11814a13adcec8"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -209,6 +209,12 @@ git-tree-sha1 = "fde3bf89aead2e723284a8ff9cdf5b551ed700e8"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.18.5+0"
 
+[[deps.CellListMap]]
+deps = ["ChunkSplitters", "Compat", "DocStringExtensions", "LinearAlgebra", "Parameters", "PrecompileTools", "ProgressMeter", "Random", "Setfield", "StaticArrays", "TestItems"]
+git-tree-sha1 = "a6930e28f66cc30e4ffc111258661ac30b5010d6"
+uuid = "69e1c6dd-3888-40e6-b3c8-31ac5f578864"
+version = "0.9.15"
+
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra"]
 git-tree-sha1 = "e4c6a16e77171a5f5e25e9646617ab1c276c5607"
@@ -218,6 +224,11 @@ weakdeps = ["SparseArrays"]
 
     [deps.ChainRulesCore.extensions]
     ChainRulesCoreSparseArraysExt = "SparseArrays"
+
+[[deps.ChunkSplitters]]
+git-tree-sha1 = "63a3903063d035260f0f6eab00f517471c5dc784"
+uuid = "ae650224-84b6-46f8-82ea-d812ca08434e"
+version = "3.1.2"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -1085,9 +1096,9 @@ version = "0.7.2"
 
 [[deps.MicrobeAgents]]
 deps = ["Agents", "Autocorrelations", "DataFrames", "Distributions", "GeometryBasics", "LightSumTypes", "LinearAlgebra", "MeanSquaredDisplacement", "Quaternions", "Random", "StaticArrays", "StatsBase"]
-git-tree-sha1 = "2366489383fce3f23fe8884c469d1cb6c5d9bab6"
+git-tree-sha1 = "661725cf11dd9c14bc5f3a421a32cce188e2fe01"
 uuid = "b17a4bac-8667-4a2d-84f7-1883ae0b8dbb"
-version = "0.5.3"
+version = "0.6.0"
 
 [[deps.Missings]]
 deps = ["DataAPI"]
@@ -1743,6 +1754,11 @@ version = "0.1.1"
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 version = "1.11.0"
+
+[[deps.TestItems]]
+git-tree-sha1 = "42fd9023fef18b9b78c8343a4e2f3813ffbcefcb"
+uuid = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
+version = "1.0.0"
 
 [[deps.TiffImages]]
 deps = ["ColorTypes", "DataStructures", "DocStringExtensions", "FileIO", "FixedPointNumbers", "IndirectArrays", "Inflate", "Mmap", "OffsetArrays", "PkgVersion", "PrecompileTools", "ProgressMeter", "SIMD", "UUIDs"]

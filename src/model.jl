@@ -74,16 +74,31 @@ function setup_abm_community(;
 )
     space = ContinuousSpace(fill(L, SVector{3}); periodic)
     community = generate_community(space, α, Aphy, Rmin, Rmax, PER; rng)
-    origin = fill(L/2, SVector{3})
-    chemo = CommField(community, Cb, γ)
+    spatialcfg, phytoplankton_leakage = community
+    phytoplankton_positions = SVector{3}.(getproperty.(spatialcfg, :pos))
+    phytoplankton_radii = getproperty.(spatialcfg, :radius)
+    system = ParticleSystem(
+        xpositions=zeros(SVector{3,Float64}, n),
+        ypositions=phytoplankton_positions,
+        unitcell=spacesize(space),
+        cutoff=3γ,
+        output=OutCommField(zeros(n), zeros(SVector{3,Float64}, n)),
+        output_name=:measurements,
+        parallel=false
+    )
+    chemo = CommField(Cb, γ)
     properties = Dict(
-        :community => community,
+        :neighborlist => system,
+        :phytoplankton_radii => phytoplankton_radii,
+        :phytoplankton_leakage => phytoplankton_leakage,
         :chemoattractant => chemo,
     )
     N = (mot == "RT" ? 2 : 4)
     model = StandardABM(Brumley{3,N}, space, dt;
         properties,
-        container=Vector,
+        container = Vector,
+        agent_step! = dummystep,
+        model_step! = community_step!,
     )
     for i in 1:n
         motility = if mot == "RT"
@@ -102,6 +117,12 @@ function setup_abm_community(;
             memory=τm,
         )
     end
+    abmproperties(model).neighborlist.xpositions .=
+        position.(allagents(model))
+    map_pairwise!(
+        (x,y,i,j,d2,out) -> comm_out!(x,y,i,j,d2,out,model),
+        abmproperties(model)[:neighborlist]
+    )
     return model
 end
 
@@ -134,4 +155,40 @@ function leaked_concentration(R, PER;
     L = b * Ru^2.28 * μ * PER * nC
     Cs = L / (4π*D*Ru) |> u"μM"
     ustrip(Cs)
+end
+
+function community_step!(model)
+    dt = abmtimestep(model)
+    # move all cells to new positions
+    for microbe in allagents(model)
+        move_agent!(microbe, model, speed(microbe)*dt)
+        MicrobeAgents.rotational_diffusion!(microbe, model)
+    end
+    # update neighbor list
+    nlist = abmproperties(model)[:neighborlist]
+    for i in allids(model)
+        nlist.xpositions[i] = position(model[i])
+    end
+    # compute new values of concentration and gradient
+    map_pairwise(
+        (x,y,i,j,d2,out) -> comm_out!(x,y,i,j,d2,out,model),
+        nlist
+    )
+    # continue with individual microbe steps as usual
+    for microbe in allagents(model)
+        model.affect!(microbe, model)
+        if MicrobeAgents.can_turn(microbe)
+            MicrobeAgents.turn!(microbe, model)
+        end
+        p = switching_probability(microbe, model)
+        if rand(abmrng(model)) < p
+            update_motilestate!(microbe, model)
+            new_motilestate = motilestate(microbe)
+            if variantof(new_motilestate) === TurnState && iszero(duration(new_motilestate))
+                MicrobeAgents.turn!(microbe, model)
+                update_motilestate!(microbe, model)
+            end
+            MicrobeAgents.update_speed!(microbe, model)
+        end
+    end
 end

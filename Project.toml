@@ -6,6 +6,7 @@ Agents = "46ada45e-f475-11e8-01d0-f70cc89e6671"
 BubbleBath = "06490a66-c478-4593-a275-4b14021bccc5"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+CellListMap = "69e1c6dd-3888-40e6-b3c8-31ac5f578864"
 Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
@@ -25,4 +26,5 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [compat]
 DrWatson = "2.19.1"
+MicrobeAgents = "0.6"
 julia = "1.11.5"

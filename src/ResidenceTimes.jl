@@ -5,6 +5,7 @@ using LinearAlgebra
 using Agents
 using MicrobeAgents
 using StaticArrays
+using CellListMap
 using CSV
 using DataFrames
 using Random
