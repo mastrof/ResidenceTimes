@@ -2,6 +2,8 @@
 #                          DrWatson Project Structure                          #
 ################################################################################
 
+.gitignore
+
 # Folders to ignore - files may be too large, too many, etc. NOTE: EDIT IF NEEDED.
 /data
 /videos
@@ -9,6 +11,8 @@
 /plots_old
 /notebooks
 /_research
+/slides
+/papers
 
 ################################################################################
 #                                    Julia                                     #
