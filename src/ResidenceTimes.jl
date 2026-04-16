@@ -5,8 +5,10 @@ using LinearAlgebra
 using Agents
 using MicrobeAgents
 using StaticArrays
+using CellListMap
 using CSV
 using DataFrames
+using Random
 
 include("utils.jl")
 include("wsave.jl")
