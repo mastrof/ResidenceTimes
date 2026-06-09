@@ -484,7 +484,8 @@ Add to `test/runtests.jl` inside the outer `@testset`:
 
 ```julia
 @testset "community surface collision" begin
-    model = setup_abm_community(; n=1, L=300.0, Aphy=1e6, mot="RRF",
+    # L must exceed 2*field_cutoff = 2*2.5γ = 750 μm (CellListMap unit-cell rule)
+    model = setup_abm_community(; n=1, L=800.0, Aphy=1e6, mot="RRF",
                                 U=40.0, dt=0.1, rng=Xoshiro(1))
     @test length(model.phytoplankton_radii) ≥ 1
 
@@ -715,7 +716,7 @@ end
 println("single-source: no penetration over 500 steps ✓")
 
 # --- community model ---
-cmodel = setup_abm_community(; n=5_000, L=400.0, Aphy=1e6, mot="RRF",
+cmodel = setup_abm_community(; n=5_000, L=1000.0, Aphy=1e6, mot="RRF",
                              U=40.0, dt=0.1, rng=Xoshiro(7))
 ccentres = cmodel.neighborlist.ypositions
 cradii = cmodel.phytoplankton_radii
@@ -784,4 +785,5 @@ git commit -m "test: end-to-end no-penetration verification script"
 - **Microbe radius:** the Brumley microbe's default `radius` is **0.5 μm** (not 0). The effective contact radius is therefore `R_eff = sphere_radius + 0.5`; collision code uses `radius(microbe)` so it stays correct if that default changes.
 - **Cutoff:** the community collision cutoff is `Rmax + U·dt + 2.0` μm. If a future sweep raises `U` or `dt` substantially, this is the value to revisit — it must stay ≥ `Rmax + microbe_radius + max_speed·dt` (the `+2.0` margin already covers the 0.5 μm microbe radius).
 - **Field timing unchanged:** the concentration/gradient pass still runs on post-move positions, exactly as on `main`; only the move itself is now clamped.
+- **Domain-size constraint:** CellListMap requires every box side `> 2·cutoff`. The field list's cutoff is `2.5γ = 375 μm`, so the community model needs `L > 750 μm`. All production configs satisfy this (L ≥ 1000); tests/scripts must too.
 ```
