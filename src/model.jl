@@ -18,6 +18,7 @@ function setup_abm(;
     Γ=50.0, # chemotactic gain
     κ=50.0, # receptor gain (1/μM)
     τm=1.3, # chemotactic memory time (s)
+    rng=Xoshiro(1)
 )
     space = ContinuousSpace(fill(L, SVector{3}); periodic)
     origin = fill(L/2, SVector{3})
@@ -29,6 +30,8 @@ function setup_abm(;
     model = StandardABM(Brumley{3,N}, space, dt;
         properties,
         container=Vector,
+        agent_step! = microbe_step_collision!,
+        rng,
     )
     for i in 1:n
         motility = if mot == "RT"
@@ -86,9 +89,23 @@ function setup_abm_community(;
         output_name=:measurements,
         parallel=false
     )
+    # μm: largest sphere + max step + margin. Safe because every motility is built
+    # with the single speed `[U]`, so a swimmer's step never exceeds U*dt; a pair
+    # closer than this cutoff is always tested. Revisit if speeds ever exceed U.
+    collision_cutoff = Rmax + U*dt + 2.0
+    collisionsystem = ParticleSystem(
+        xpositions=zeros(SVector{3,Float64}, n),
+        ypositions=phytoplankton_positions,
+        unitcell=spacesize(space),
+        cutoff=collision_cutoff,
+        output=OutCollision(ones(n)),
+        output_name=:measurements,
+        parallel=false
+    )
     chemo = CommField(Cb, γ)
     properties = Dict(
         :neighborlist => system,
+        :collisionlist => collisionsystem,
         :phytoplankton_radii => phytoplankton_radii,
         :phytoplankton_leakage => phytoplankton_leakage,
         :chemoattractant => chemo,
@@ -99,6 +116,7 @@ function setup_abm_community(;
         container = Vector,
         agent_step! = dummystep,
         model_step! = community_step!,
+        rng,
     )
     for i in 1:n
         motility = if mot == "RT"
@@ -118,6 +136,8 @@ function setup_abm_community(;
         )
     end
     abmproperties(model).neighborlist.xpositions .=
+        position.(allagents(model))
+    abmproperties(model).collisionlist.xpositions .=
         position.(allagents(model))
     map_pairwise!(
         (x,y,i,j,d2,out) -> comm_out!(x,y,i,j,d2,out,model),
@@ -158,37 +178,37 @@ function leaked_concentration(R, PER;
 end
 
 function community_step!(model)
-    dt = abmtimestep(model)
-    # move all cells to new positions
-    for microbe in allagents(model)
-        move_agent!(microbe, model, speed(microbe)*dt)
-        MicrobeAgents.rotational_diffusion!(microbe, model)
-    end
-    # update neighbor list
+    collisionlist = abmproperties(model)[:collisionlist]
     nlist = abmproperties(model)[:neighborlist]
+
+    # 1. detect collisions on the current (pre-move) positions
+    for i in allids(model)
+        collisionlist.xpositions[i] = position(model[i])
+    end
+    map_pairwise!(
+        (x, y, i, j, d2, out) -> collision_out!(x, y, i, j, d2, out, model),
+        collisionlist
+    )
+    αmin = collisionlist.measurements.αmin
+
+    # 2. move every swimmer with surface clamping, then rotational diffusion
+    for microbe in allagents(model)
+        resolve_collision!(microbe, model, αmin[microbe.id])
+        rotational_diffusion!(microbe, model)
+    end
+
+    # 3. recompute concentration + gradient at the new positions
     for i in allids(model)
         nlist.xpositions[i] = position(model[i])
     end
-    # compute new values of concentration and gradient
-    map_pairwise(
-        (x,y,i,j,d2,out) -> comm_out!(x,y,i,j,d2,out,model),
+    map_pairwise!(
+        (x, y, i, j, d2, out) -> comm_out!(x, y, i, j, d2, out, model),
         nlist
     )
-    # continue with individual microbe steps as usual
+
+    # 4. chemotactic update and reorientation
     for microbe in allagents(model)
-        model.affect!(microbe, model)
-        if MicrobeAgents.can_turn(microbe)
-            MicrobeAgents.turn!(microbe, model)
-        end
-        p = switching_probability(microbe, model)
-        if rand(abmrng(model)) < p
-            update_motilestate!(microbe, model)
-            new_motilestate = motilestate(microbe)
-            if variantof(new_motilestate) === TurnState && iszero(duration(new_motilestate))
-                MicrobeAgents.turn!(microbe, model)
-                update_motilestate!(microbe, model)
-            end
-            MicrobeAgents.update_speed!(microbe, model)
-        end
+        affect_step!(microbe, model)
+        reorient_step!(microbe, model)
     end
 end

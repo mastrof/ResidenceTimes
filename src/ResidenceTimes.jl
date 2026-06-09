@@ -14,6 +14,7 @@ include("utils.jl")
 include("wsave.jl")
 include("reader.jl")
 include("concentration_field.jl")
+include("encounter.jl")
 include("model.jl")
 
 end # module
