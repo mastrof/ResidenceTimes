@@ -131,6 +131,8 @@ function setup_abm_community(;
     end
     abmproperties(model).neighborlist.xpositions .=
         position.(allagents(model))
+    abmproperties(model).collisionlist.xpositions .=
+        position.(allagents(model))
     map_pairwise!(
         (x,y,i,j,d2,out) -> comm_out!(x,y,i,j,d2,out,model),
         abmproperties(model)[:neighborlist]
