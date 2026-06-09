@@ -1,6 +1,7 @@
 export ExpField, field_exp, gradient_exp
 export CommField, field_comm, gradient_comm
 export comm_out!, OutCommField
+export OutCollision, collision_out!
 
 @kwdef struct ExpField <: AbstractChemoattractant{3}
     origin::SVector{3,Float64}
@@ -151,8 +152,6 @@ function gradient_comm(microbe::AbstractMicrobe, model::ABM)::SVector{3,Float64}
     abmproperties(model)[:neighborlist].measurements.dc[microbe.id]
 end
 
-export OutCollision, collision_out!
-
 # Per-microbe earliest hit fraction across nearby phytoplankton, accumulated over
 # a CellListMap pairwise pass. αmin[i] == 1.0 means microbe i hits nothing.
 mutable struct OutCollision
@@ -182,6 +181,6 @@ function collision_out!(x, y, i, j, d2, out::OutCollision, model::ABM)
     f = distancevector(P, position(microbe), model)
     d = velocity(microbe) .* abmtimestep(model)
     α = ray_sphere_fraction(f, d, R)
-    @inbounds out.αmin[i] = min(out.αmin[i], α)
+    out.αmin[i] = min(out.αmin[i], α)
     return out
 end

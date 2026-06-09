@@ -88,9 +88,11 @@ using Test
         # reset returns every entry to 1.0 (no collision)
         CellListMap.reset_output!(r)
         @test all(r.αmin .== 1.0)
-        # copy is independent
-        c = CellListMap.copy_output(ResidenceTimes.OutCollision([0.2, 0.3]))
+        # copy is independent of its source
+        src = ResidenceTimes.OutCollision([0.2, 0.3])
+        c = CellListMap.copy_output(src)
         c.αmin[1] = 9.0
         @test c.αmin == [9.0, 0.3]
+        @test src.αmin == [0.2, 0.3]   # source untouched
     end
 end
