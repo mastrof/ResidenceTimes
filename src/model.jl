@@ -89,7 +89,10 @@ function setup_abm_community(;
         output_name=:measurements,
         parallel=false
     )
-    collision_cutoff = Rmax + U*dt + 2.0  # μm: largest sphere + max step + margin
+    # μm: largest sphere + max step + margin. Safe because every motility is built
+    # with the single speed `[U]`, so a swimmer's step never exceeds U*dt; a pair
+    # closer than this cutoff is always tested. Revisit if speeds ever exceed U.
+    collision_cutoff = Rmax + U*dt + 2.0
     collisionsystem = ParticleSystem(
         xpositions=zeros(SVector{3,Float64}, n),
         ypositions=phytoplankton_positions,
