@@ -27,10 +27,12 @@ dicts = dict_list(allparams)
     # radial distance from source
     r(a) = distance(a, chemoattractant(model).origin, model)
     # normalized concentration value at position
+    cellradius = radius(model[1])
+    c_max = exp(-cellradius/γ) * R / (R+cellradius)
     function _c(a)
         r = distance(a, chemoattractant(model).origin, model)
-        exp(-(r-R)/γ) * R / r
-    end
+        exp(-(r-R)/γ) * R / r / c_max
+    end # =1 when cell and phytoplankton are in contact
     c(a) = _c(a) # HACK: somehow necessary for correct naming
     adata = [r, c]
     # do not collect during first 30 minutes equilibration
