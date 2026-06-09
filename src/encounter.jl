@@ -13,7 +13,9 @@ radius `R`. Returns `1.0` if the step does not enter the sphere.
 
 Only the entry intersection (smaller root) is considered: a point already on the
 surface moving outward is free to leave (returns `1.0`), while one moving inward
-cannot advance (returns `0.0`).
+cannot advance (returns `0.0`). A point starting strictly inside the sphere has no
+entry crossing and returns `1.0` (treated as "move freely"), so an initial overlap
+resolves itself as the point swims out.
 """
 function ray_sphere_fraction(f::SVector{D}, d::SVector{D}, R::Real)::Float64 where {D}
     a = dot(d, d)
@@ -31,8 +33,8 @@ end
 
 Shared core for both models. Advance `microbe` along its velocity by the clamped
 fraction `α_hit` of one timestep. If a collision occurred (`α_hit < 1`), pin the
-cell by zeroing its speed; its heading is preserved, so a later reorientation
-(`update_speed!`) resumes motion in a new direction.
+cell by zeroing its speed; its heading is preserved, so the cell resumes motion
+once it next reorients (`reorient_step!` restores speed on a motile-state switch).
 """
 function resolve_collision!(microbe::AbstractMicrobe, model::ABM, α_hit::Real)
     move_agent!(microbe, model, α_hit * abmtimestep(model))

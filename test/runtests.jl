@@ -38,14 +38,14 @@ using Test
         @test isapprox(distance(a, origin, model), R_eff; atol=1e-6)  # pinned at surface
         @test a.speed == 0.0                                          # halted
 
-        # on the surface pointing outward → not clamped, moves away, keeps speed
+        # at the nominal sphere radius, pointing outward → not clamped, moves away, keeps speed
         b = model[1]
-        b.pos = origin .- SVector(10.0, 0.0, 0.0)   # exactly on the surface
+        b.pos = origin .- SVector(10.0, 0.0, 0.0)   # at the bare sphere radius (inside R_eff)
         b.vel = SVector(-1.0, 0.0, 0.0)             # away from centre
         b.speed = 40.0
         ResidenceTimes.collision_move_step!(b, model)
         @test b.speed == 40.0
-        @test distance(b, origin, model) > 10.0
+        @test distance(b, origin, model) > R_eff
     end
 
     @testset "collision across periodic boundary" begin
