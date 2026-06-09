@@ -25,3 +25,50 @@ function ray_sphere_fraction(f::SVector{D}, d::SVector{D}, R::Real)::Float64 whe
     t = (-b - sqrt(disc)) / (2a)       # entry point (smaller root)
     return (0.0 ≤ t ≤ 1.0) ? t : 1.0
 end
+
+"""
+    resolve_collision!(microbe, model, α_hit)
+
+Shared core for both models. Advance `microbe` along its velocity by the clamped
+fraction `α_hit` of one timestep. If a collision occurred (`α_hit < 1`), pin the
+cell by zeroing its speed; its heading is preserved, so a later reorientation
+(`update_speed!`) resumes motion in a new direction.
+"""
+function resolve_collision!(microbe::AbstractMicrobe, model::ABM, α_hit::Real)
+    move_agent!(microbe, model, α_hit * abmtimestep(model))
+    if α_hit < 1
+        microbe.speed = zero(microbe.speed)
+    end
+    return microbe
+end
+
+"""
+    collision_move_step!(microbe, model)
+
+Single-source variant of MicrobeAgents' `move_step!`: clamp the step against the
+one chemoattractant sphere (`chemoattractant(model).origin`/`.radius`), then apply
+rotational diffusion.
+"""
+function collision_move_step!(microbe::AbstractMicrobe, model::ABM)
+    chemo = chemoattractant(model)
+    f = distancevector(chemo.origin, position(microbe), model)
+    d = velocity(microbe) .* abmtimestep(model)
+    R = chemo.radius + radius(microbe)
+    α = ray_sphere_fraction(f, d, R)
+    resolve_collision!(microbe, model, α)
+    rotational_diffusion!(microbe, model)
+    return microbe
+end
+
+"""
+    microbe_step_collision!(microbe, model)
+
+Drop-in replacement for `microbe_step!` that resolves single-source surface
+collisions during the translation substep.
+"""
+function microbe_step_collision!(microbe::AbstractMicrobe, model::ABM)
+    collision_move_step!(microbe, model)
+    affect_step!(microbe, model)
+    reorient_step!(microbe, model)
+    return microbe
+end
