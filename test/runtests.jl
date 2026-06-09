@@ -1,17 +1,11 @@
-using DrWatson, Test
-@quickactivate "ResidenceTimes"
+using ResidenceTimes
+using MicrobeAgents
+using StaticArrays
+using LinearAlgebra
+using Random
+using CellListMap
+using Test
 
-# Here you include files using `srcdir`
-# include(srcdir("file.jl"))
-
-# Run test suite
-println("Starting tests")
-ti = time()
-
-@testset "ResidenceTimes tests" begin
-    @test 1 == 1
+@testset "ResidenceTimes collisions" begin
+    # testsets are added by later tasks
 end
-
-ti = time() - ti
-println("\nTest took total time of:")
-println(round(ti/60, digits = 3), " minutes")
