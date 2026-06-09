@@ -78,4 +78,19 @@ using Test
         R_eff = chemoattractant(model).radius + radius(a)
         @test distance(a, origin, model) ≥ R_eff - 1e-6   # never penetrated the sphere
     end
+
+    @testset "OutCollision reducer/reset" begin
+        out = ResidenceTimes.OutCollision([0.4, 1.0, 0.8])
+        # reducer keeps the element-wise minimum
+        other = ResidenceTimes.OutCollision([0.7, 0.5, 0.9])
+        r = CellListMap.reducer(out, other)
+        @test r.αmin == [0.4, 0.5, 0.8]
+        # reset returns every entry to 1.0 (no collision)
+        CellListMap.reset_output!(r)
+        @test all(r.αmin .== 1.0)
+        # copy is independent
+        c = CellListMap.copy_output(ResidenceTimes.OutCollision([0.2, 0.3]))
+        c.αmin[1] = 9.0
+        @test c.αmin == [9.0, 0.3]
+    end
 end

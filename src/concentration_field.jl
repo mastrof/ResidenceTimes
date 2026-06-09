@@ -150,3 +150,38 @@ end
 function gradient_comm(microbe::AbstractMicrobe, model::ABM)::SVector{3,Float64}
     abmproperties(model)[:neighborlist].measurements.dc[microbe.id]
 end
+
+export OutCollision, collision_out!
+
+# Per-microbe earliest hit fraction across nearby phytoplankton, accumulated over
+# a CellListMap pairwise pass. αmin[i] == 1.0 means microbe i hits nothing.
+mutable struct OutCollision
+    αmin::Vector{Float64}
+end
+function CellListMap.copy_output(x::OutCollision)
+    return OutCollision(copy(x.αmin))
+end
+function CellListMap.reset_output!(x::OutCollision)
+    fill!(x.αmin, 1.0)
+    return x
+end
+function CellListMap.reducer(x::OutCollision, y::OutCollision)
+    @inbounds for i in eachindex(x.αmin)
+        x.αmin[i] = min(x.αmin[i], y.αmin[i])
+    end
+    return x
+end
+
+# Pairwise kernel: clamp microbe i's step against phytoplankton j and keep the
+# earliest (minimum) hit fraction. Uses pre-move positions and the microbe's
+# current velocity; periodicity is handled by `distancevector`.
+function collision_out!(x, y, i, j, d2, out::OutCollision, model::ABM)
+    microbe = model[i]
+    P = abmproperties(model)[:collisionlist].ypositions[j]
+    R = abmproperties(model)[:phytoplankton_radii][j] + radius(microbe)
+    f = distancevector(P, position(microbe), model)
+    d = velocity(microbe) .* abmtimestep(model)
+    α = ray_sphere_fraction(f, d, R)
+    @inbounds out.αmin[i] = min(out.αmin[i], α)
+    return out
+end
