@@ -315,8 +315,10 @@ Add to `test/runtests.jl` inside the outer `@testset`:
 ```julia
 @testset "setup_abm uses collision stepping" begin
     # head-on at the central sphere: with the default (ghost) stepping the swimmer
-    # would move the full 4 μm and end up inside (distance 8 < R=10); once the
+    # would move the full 4 μm and end up inside (distance 8 < R_eff); once the
     # collision agent_step! is wired it is clamped to the surface instead.
+    # NOTE: the Brumley microbe radius is 0.5, so the effective contact radius is
+    # R_eff = sphere radius + microbe radius = 10.5.
     model = setup_abm(; n=1, L=1000.0, R=10.0, U=40.0, mot="RR", dt=0.1, Cs=1.0)
     origin = chemoattractant(model).origin
     a = model[1]
@@ -324,7 +326,8 @@ Add to `test/runtests.jl` inside the outer `@testset`:
     a.vel = SVector(1.0, 0.0, 0.0)
     a.speed = 40.0
     step!(model, 1)                       # runs the wired agent_step!
-    @test distance(a, origin, model) ≥ 10.0 - 1e-6   # never penetrated the sphere
+    R_eff = chemoattractant(model).radius + radius(a)
+    @test distance(a, origin, model) ≥ R_eff - 1e-6   # never penetrated the sphere
 end
 ```
 
@@ -334,7 +337,7 @@ Run:
 ```julia
 include("/home/riccardo/Science/ResidenceTimes/test/runtests.jl")
 ```
-Expected: FAIL — with the default `microbe_step!` the swimmer moves the full step and ends up at distance 8, so `distance ≥ 10 - 1e-6` fails.
+Expected: FAIL — with the default `microbe_step!` the swimmer moves the full step and ends up at distance 8, so `distance ≥ R_eff - 1e-6` (≈10.5) fails.
 
 - [ ] **Step 3: Add `agent_step!` to the `setup_abm` model constructor**
 
@@ -488,15 +491,16 @@ Add to `test/runtests.jl` inside the outer `@testset`:
     # aim the single swimmer straight at the first phytoplankton, 5 μm outside it,
     # fast enough (step 8 μm) to overshoot the surface without clamping
     P = model.neighborlist.ypositions[1]
-    R = model.phytoplankton_radii[1]
+    R = model.phytoplankton_radii[1]                         # bare sphere radius
     a = model[1]
     dir = normalize(distancevector(position(a), P, model))   # unit vector toward P
     a.pos = P .- dir .* (R + 5.0)
     a.vel = dir
     a.speed = 80.0
     step!(model, 1)                                          # runs community_step!
-    # clamped at the surface instead of penetrating
-    @test isapprox(distance(a, P, model), R; atol=1e-4)
+    # clamped at the surface instead of penetrating (R_eff = sphere + microbe radius)
+    R_eff = R + radius(a)
+    @test isapprox(distance(a, P, model), R_eff; atol=1e-4)
 end
 ```
 
@@ -777,6 +781,7 @@ git commit -m "test: end-to-end no-penetration verification script"
 ## Notes / known edge cases
 
 - **Initial overlaps:** swimmers are placed at random and a few may start *inside* a phytoplankton. `ray_sphere_fraction` returns `1.0` for an inside-start (the entry root is negative), so such cells move freely until they exit, then collide normally. The models discard an equilibration window before sampling, so this does not affect measured exposure. No rejection sampling is added (YAGNI).
-- **Cutoff:** the community collision cutoff is `Rmax + U·dt + 2.0` μm. If a future sweep raises `U` or `dt` substantially, this is the value to revisit — it must stay ≥ `Rmax + microbe_radius + max_speed·dt`.
+- **Microbe radius:** the Brumley microbe's default `radius` is **0.5 μm** (not 0). The effective contact radius is therefore `R_eff = sphere_radius + 0.5`; collision code uses `radius(microbe)` so it stays correct if that default changes.
+- **Cutoff:** the community collision cutoff is `Rmax + U·dt + 2.0` μm. If a future sweep raises `U` or `dt` substantially, this is the value to revisit — it must stay ≥ `Rmax + microbe_radius + max_speed·dt` (the `+2.0` margin already covers the 0.5 μm microbe radius).
 - **Field timing unchanged:** the concentration/gradient pass still runs on post-move positions, exactly as on `main`; only the move itself is now clamped.
 ```
