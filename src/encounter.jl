@@ -11,17 +11,22 @@ Fraction `t ∈ [0,1]` of the displacement `d` at which a point starting at `f`
 (its position relative to the sphere centre) first crosses *into* the sphere of
 radius `R`. Returns `1.0` if the step does not enter the sphere.
 
-Only the entry intersection (smaller root) is considered: a point already on the
-surface moving outward is free to leave (returns `1.0`), while one moving inward
-cannot advance (returns `0.0`). A point starting strictly inside the sphere has no
-entry crossing and returns `1.0` (treated as "move freely"), so an initial overlap
-resolves itself as the point swims out.
+Only the entry intersection (smaller root) is considered: a point on or inside the
+surface is free to move outward (returns `1.0`) but blocked from moving inward
+(returns `0.0`). An initial overlap therefore resolves once the point's heading
+turns outward, rather than by swimming deeper.
 """
 function ray_sphere_fraction(f::SVector{D}, d::SVector{D}, R::Real)::Float64 where {D}
     a = dot(d, d)
     iszero(a) && return 1.0            # no displacement (e.g. a pinned cell)
     b = 2 * dot(f, d)
     c = dot(f, f) - R * R
+    # On or inside the surface (c ≤ 0): block inward motion (0), allow outward (1).
+    # Handled explicitly because the entry-root formula below is numerically
+    # unstable for c ≈ 0 — a cell pinned exactly on the surface would otherwise
+    # leak through (rounding makes c slightly negative and the entry root slightly
+    # negative, which the [0,1] test would read as "no collision").
+    c ≤ 0 && return b < 0 ? 0.0 : 1.0
     disc = b * b - 4 * a * c
     disc < 0 && return 1.0             # the ray misses the sphere
     t = (-b - sqrt(disc)) / (2a)       # entry point (smaller root)

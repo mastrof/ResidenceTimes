@@ -18,6 +18,7 @@ function setup_abm(;
     Γ=50.0, # chemotactic gain
     κ=50.0, # receptor gain (1/μM)
     τm=1.3, # chemotactic memory time (s)
+    rng=Xoshiro(1)
 )
     space = ContinuousSpace(fill(L, SVector{3}); periodic)
     origin = fill(L/2, SVector{3})
@@ -30,6 +31,7 @@ function setup_abm(;
         properties,
         container=Vector,
         agent_step! = microbe_step_collision!,
+        rng,
     )
     for i in 1:n
         motility = if mot == "RT"
@@ -111,6 +113,7 @@ function setup_abm_community(;
         container = Vector,
         agent_step! = dummystep,
         model_step! = community_step!,
+        rng,
     )
     for i in 1:n
         motility = if mot == "RT"

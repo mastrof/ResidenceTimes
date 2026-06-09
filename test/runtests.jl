@@ -22,6 +22,13 @@ using Test
         @test rsf(SVector(-1.0, 0.0, 0.0), SVector(-4.0, 0.0, 0.0), 1.0) == 1.0
         # exactly on the surface, pointing INWARD → cannot advance
         @test rsf(SVector(-1.0, 0.0, 0.0), SVector(4.0, 0.0, 0.0), 1.0) == 0.0
+        # numerically on the surface (|f| rounds just under R), inward → blocked
+        # (regression: rounding makes c≈-1.8e-13; the entry-root path would leak)
+        @test rsf(SVector(-2.9999999999999707, 0.0, 0.0), SVector(40.0, 0.0, 0.0), 3.0) == 0.0
+        # strictly inside, moving outward → free to leave
+        @test rsf(SVector(-0.5, 0.0, 0.0), SVector(-4.0, 0.0, 0.0), 1.0) == 1.0
+        # strictly inside, moving inward → blocked (no swimming deeper)
+        @test rsf(SVector(-0.5, 0.0, 0.0), SVector(4.0, 0.0, 0.0), 1.0) == 0.0
     end
 
     @testset "single-source collision step" begin
