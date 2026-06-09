@@ -693,7 +693,8 @@ using Random
 using DataFrames
 using CairoMakie
 
-const TOL = 1e-4  # μm; clamped cells sit at the surface within rounding
+const TOL = 1e-4   # μm; clamped cells sit at the surface within rounding
+const WARMUP = 50  # steps to let any random initial overlaps eject before asserting
 
 "No swimmer centre is inside any sphere (centre distance ≥ R + microbe radius)."
 function assert_no_penetration(model, centres, radii)
@@ -709,6 +710,9 @@ end
 model = setup_abm(; n=2_000, L=1000.0, R=10.0, U=40.0, mot="RRF", dt=0.1, Cs=1.0)
 centres = [chemoattractant(model).origin]
 radii = [chemoattractant(model).radius]
+for _ in 1:WARMUP            # eject any cell randomly initialized inside the sphere
+    step!(model, 1)
+end
 for _ in 1:500
     step!(model, 1)
     assert_no_penetration(model, centres, radii)
@@ -720,6 +724,9 @@ cmodel = setup_abm_community(; n=5_000, L=1000.0, Aphy=1e6, mot="RRF",
                              U=40.0, dt=0.1, rng=Xoshiro(7))
 ccentres = cmodel.neighborlist.ypositions
 cradii = cmodel.phytoplankton_radii
+for _ in 1:WARMUP            # eject any cell randomly initialized inside a phytoplankton
+    step!(cmodel, 1)
+end
 for _ in 1:500
     step!(cmodel, 1)
     assert_no_penetration(cmodel, ccentres, cradii)
