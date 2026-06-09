@@ -34,8 +34,8 @@ dicts = dict_list(parameters)
 @everywhere function run_abm(config::Dict)
     @unpack mot, dt, U, λ, L, PER, Cb, α, Aphy = config
     γ = 150
-    model = setup_abm_community(; mot, dt, U, λ, L, α, Aphy, PER, Cb, γ, n=500_000)
-    simtime = 75 # minutes
+    model = setup_abm_community(; mot, dt, U, λ, L, α, Aphy, PER, Cb, γ, n=100_000)
+    simtime = 60 # minutes
     nsteps = round(Int, simtime * 60 / dt)
     c(a) = concentration(model)(a, model) - Cb
     adata = [x, y, z, c]
