@@ -29,6 +29,7 @@ function setup_abm(;
     model = StandardABM(Brumley{3,N}, space, dt;
         properties,
         container=Vector,
+        agent_step! = microbe_step_collision!,
     )
     for i in 1:n
         motility = if mot == "RT"

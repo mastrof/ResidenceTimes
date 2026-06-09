@@ -1,5 +1,6 @@
 using ResidenceTimes
 using MicrobeAgents
+using Agents: step!
 using StaticArrays
 using LinearAlgebra
 using Random
@@ -60,5 +61,21 @@ using Test
         R_eff = 1.0 + radius(a)            # sphere radius + microbe radius
         α = ResidenceTimes.ray_sphere_fraction(f, d, R_eff)
         @test α ≈ (3.0 - R_eff) / 4.0     # entry fraction: (|f| - R_eff) / |d|
+    end
+
+    @testset "setup_abm uses collision stepping" begin
+        # head-on at the central sphere: with the default (ghost) stepping the swimmer
+        # would move the full 4 μm and end up inside (distance 8 < R_eff); once the
+        # collision agent_step! is wired it is clamped to the surface instead.
+        # NOTE: the Brumley microbe radius is 0.5, so R_eff = sphere radius + 0.5 = 10.5.
+        model = setup_abm(; n=1, L=1000.0, R=10.0, U=40.0, mot="RR", dt=0.1, Cs=1.0)
+        origin = chemoattractant(model).origin
+        a = model[1]
+        a.pos = origin .- SVector(12.0, 0.0, 0.0)
+        a.vel = SVector(1.0, 0.0, 0.0)
+        a.speed = 40.0
+        step!(model, 1)                       # runs the wired agent_step!
+        R_eff = chemoattractant(model).radius + radius(a)
+        @test distance(a, origin, model) ≥ R_eff - 1e-6   # never penetrated the sphere
     end
 end
