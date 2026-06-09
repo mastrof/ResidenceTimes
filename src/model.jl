@@ -87,9 +87,20 @@ function setup_abm_community(;
         output_name=:measurements,
         parallel=false
     )
+    collision_cutoff = Rmax + U*dt + 2.0  # μm: largest sphere + max step + margin
+    collisionsystem = ParticleSystem(
+        xpositions=zeros(SVector{3,Float64}, n),
+        ypositions=phytoplankton_positions,
+        unitcell=spacesize(space),
+        cutoff=collision_cutoff,
+        output=OutCollision(ones(n)),
+        output_name=:measurements,
+        parallel=false
+    )
     chemo = CommField(Cb, γ)
     properties = Dict(
         :neighborlist => system,
+        :collisionlist => collisionsystem,
         :phytoplankton_radii => phytoplankton_radii,
         :phytoplankton_leakage => phytoplankton_leakage,
         :chemoattractant => chemo,
@@ -159,37 +170,37 @@ function leaked_concentration(R, PER;
 end
 
 function community_step!(model)
-    dt = abmtimestep(model)
-    # move all cells to new positions
-    for microbe in allagents(model)
-        move_agent!(microbe, model, speed(microbe)*dt)
-        MicrobeAgents.rotational_diffusion!(microbe, model)
-    end
-    # update neighbor list
+    collisionlist = abmproperties(model)[:collisionlist]
     nlist = abmproperties(model)[:neighborlist]
+
+    # 1. detect collisions on the current (pre-move) positions
+    for i in allids(model)
+        collisionlist.xpositions[i] = position(model[i])
+    end
+    map_pairwise!(
+        (x, y, i, j, d2, out) -> collision_out!(x, y, i, j, d2, out, model),
+        collisionlist
+    )
+    αmin = collisionlist.measurements.αmin
+
+    # 2. move every swimmer with surface clamping, then rotational diffusion
+    for microbe in allagents(model)
+        resolve_collision!(microbe, model, αmin[microbe.id])
+        rotational_diffusion!(microbe, model)
+    end
+
+    # 3. recompute concentration + gradient at the new positions
     for i in allids(model)
         nlist.xpositions[i] = position(model[i])
     end
-    # compute new values of concentration and gradient
-    map_pairwise(
-        (x,y,i,j,d2,out) -> comm_out!(x,y,i,j,d2,out,model),
+    map_pairwise!(
+        (x, y, i, j, d2, out) -> comm_out!(x, y, i, j, d2, out, model),
         nlist
     )
-    # continue with individual microbe steps as usual
+
+    # 4. chemotactic update and reorientation
     for microbe in allagents(model)
-        model.affect!(microbe, model)
-        if MicrobeAgents.can_turn(microbe)
-            MicrobeAgents.turn!(microbe, model)
-        end
-        p = switching_probability(microbe, model)
-        if rand(abmrng(model)) < p
-            update_motilestate!(microbe, model)
-            new_motilestate = motilestate(microbe)
-            if variantof(new_motilestate) === TurnState && iszero(duration(new_motilestate))
-                MicrobeAgents.turn!(microbe, model)
-                update_motilestate!(microbe, model)
-            end
-            MicrobeAgents.update_speed!(microbe, model)
-        end
+        affect_step!(microbe, model)
+        reorient_step!(microbe, model)
     end
 end

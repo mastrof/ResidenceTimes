@@ -95,4 +95,25 @@ using Test
         @test c.αmin == [9.0, 0.3]
         @test src.αmin == [0.2, 0.3]   # source untouched
     end
+
+    @testset "community surface collision" begin
+        # L must exceed 2*field_cutoff = 2*2.5γ = 750 μm (CellListMap unit-cell rule)
+        model = setup_abm_community(; n=1, L=800.0, Aphy=1e6, mot="RRF",
+                                    U=40.0, dt=0.1, rng=Xoshiro(1))
+        @test length(model.phytoplankton_radii) ≥ 1
+
+        # aim the single swimmer straight at the first phytoplankton, 5 μm outside it,
+        # fast enough (step 8 μm) to overshoot the surface without clamping
+        P = model.neighborlist.ypositions[1]
+        R = model.phytoplankton_radii[1]                         # bare sphere radius
+        a = model[1]
+        dir = normalize(distancevector(position(a), P, model))   # unit vector toward P
+        a.pos = P .- dir .* (R + 5.0)
+        a.vel = dir
+        a.speed = 80.0
+        step!(model, 1)                                          # runs community_step!
+        # clamped at the surface instead of penetrating (R_eff = sphere + microbe radius)
+        R_eff = R + radius(a)
+        @test isapprox(distance(a, P, model), R_eff; atol=1e-4)
+    end
 end
