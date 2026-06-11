@@ -7,13 +7,28 @@ using Distributed
     using MicrobeAgents
 end
 
-R = [1, 3, 10] # μm
-mot = ["RT", "RR", "RRF"]
+# exposure distributions
+# R = [1, 3, 10] # μm
+# mot = ["RT", "RR", "RRF"]
+# dt = [0.1] # s
+# U = [10, 20, 40] # μm/s
+# λ = [2.2, 0.5, 0.1] # 1/s
+# L = [1000] # μm
+# Cs = [0, 0.1, 1, 3] # μM
+# Cb = [0.03] # μM
+# relative exposure vs R --- only RRF
+# R = [1, 3, 10] # μm
+# R = [2, 4, 5, 7] # μm
+R = [
+    2, 4, 5, 7,
+    @onlyif("U" == 60 || "U" == 80, [1, 3, 10])...
+] # μm
+mot = ["RRF"]
 dt = [0.1] # s
-U = [10, 20, 40] # μm/s
-λ = [2.2, 0.5, 0.1] # 1/s
+U = [10, 20, 40, 60, 80] # μm/s
+λ = [2.2, 0.1] # 1/s
 L = [1000] # μm
-Cs = [0, 0.1, 1, 3] # μM
+Cs = [0, 1] # μM
 Cb = [0.03] # μM
 allparams = @strdict R mot dt U λ L Cs Cb
 dicts = dict_list(allparams)
