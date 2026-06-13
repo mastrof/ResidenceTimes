@@ -38,9 +38,10 @@ regardless of whether it still exists on remote.
 
 ## Components
 
-### 1. `data/abm_archived.txt` (new, gitignored)
+### 1. `data/abm_archived.txt` (new, git-tracked)
 
-Plain text, one filename per line, append-only.
+Plain text, one filename per line, append-only. `/data` is gitignored, so add a
+`!/data/abm_archived.txt` exception to `.gitignore`.
 
 ### 2. `scripts/process_simulations.jl` (small edit)
 
