@@ -15,24 +15,13 @@ using DataFrames
 using StatsBase
 using KernelDensity
 
-function archive!(filename)
-    mv(
-        datadir("abm", filename),
-        joinpath("/media/Elements/ResidenceTimes/data/abm/", filename);
-        force=true
-    )
-    open(datadir("abm_archived.txt"), "a") do io
-        println(io, filename)
-    end
-end
-
-filenames = readdir(datadir("abm"))
+filenames = readdir(datadir("comm"))
 L = 1e3 # L is always 1mm
 npoints = 100 # points for the rdf sampling
 r = range(1, L/2; length=npoints)
 for filename in filenames
     prefix, config, suffix = parse_savename(filename)
-    df = CSV.read(datadir("abm", filename), DataFrame)
+    df = CSV.read(datadir("comm", filename), DataFrame)
     # distribution of individual exposures
     df_exposure = combine(groupby(df, :id), :c => sum)
     CSV.write(
@@ -45,8 +34,8 @@ for filename in filenames
     config_random = copy(config)
     config_random["Cs"] = 0.0
     filename_random = savename(prefix, config_random, suffix)
-    !isfile(datadir("abm", filename_random)) && continue
-    df_random = CSV.read(datadir("abm", filename_random), DataFrame)
+    !isfile(datadir("comm", filename_random)) && continue
+    df_random = CSV.read(datadir("comm", filename_random), DataFrame)
     Pr = kde(df.r; bandwidth=25)
     Pr0 = kde(df_random.r; bandwidth=25)
     k = pdf(Pr, r)
@@ -57,11 +46,17 @@ for filename in filenames
         datadir("rdf", savename("rdf", config, "csv")),
         df_rdf
     )
-    # move abm data to hard drive
-    archive!(filename)
+    # move comm data to hard drive
+    mv(
+        datadir("comm", filename),
+        joinpath("/media/Elements/ResidenceTimes/data/comm/", filename)
+    )
 end
 # the Cs=0 files have been kept, remove them now
 for filename in filenames
-    !isfile(datadir("abm", filename)) && continue
-    archive!(filename)
+    !isfile(datadir("comm", filename)) && continue
+    mv(
+        datadir("comm", filename),
+        joinpath("/media/Elements/ResidenceTimes/data/comm/", filename)
+    )
 end
