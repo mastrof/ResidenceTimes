@@ -15,6 +15,16 @@ using DataFrames
 using StatsBase
 using KernelDensity
 
+function archive!(filename)
+    mv(
+        datadir("abm", filename),
+        joinpath("/media/Elements/ResidenceTimes/data/abm/", filename)
+    )
+    open(datadir("abm_archived.txt"), "a") do io
+        println(io, filename)
+    end
+end
+
 filenames = readdir(datadir("abm"))
 L = 1e3 # L is always 1mm
 npoints = 100 # points for the rdf sampling
@@ -47,16 +57,10 @@ for filename in filenames
         df_rdf
     )
     # move abm data to hard drive
-    mv(
-        datadir("abm", filename),
-        joinpath("/media/Elements/ResidenceTimes/data/abm/", filename)
-    )
+    archive!(filename)
 end
 # the Cs=0 files have been kept, remove them now
 for filename in filenames
     !isfile(datadir("abm", filename)) && continue
-    mv(
-        datadir("abm", filename),
-        joinpath("/media/Elements/ResidenceTimes/data/abm/", filename)
-    )
+    archive!(filename)
 end
