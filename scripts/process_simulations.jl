@@ -18,7 +18,8 @@ using KernelDensity
 function archive!(filename)
     mv(
         datadir("abm", filename),
-        joinpath("/media/Elements/ResidenceTimes/data/abm/", filename)
+        joinpath("/media/Elements/ResidenceTimes/data/abm/", filename);
+        force=true
     )
     open(datadir("abm_archived.txt"), "a") do io
         println(io, filename)
