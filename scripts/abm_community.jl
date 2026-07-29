@@ -16,13 +16,18 @@ end
 
 parameters = Dict(
     :dt => 0.1, # s
-    :mot => "RRF",
-    :U => [10, 20, 40], # μm/s
+    # :mot => "RRF",
+    :mot => ["RR", "RT"],
+    # :U => [10, 20, 40], # μm/s
+    :U => [10, 40], # μm/s
     :λ => 2.2, # 1/s
-    :PER => [0.3, 0.5],
+    # :PER => [0.3, 0.5],
+    :PER => 0.5,
     :Cb => 0.0, # μM
-    :α => [0.75, 1.0],
-    :Aphy => Int.([3e4, 8e4, 3e5]), # cells/mL
+    # :α => [0.75, 1.0],
+    :α => 1.0,
+    # :Aphy => Int.([3e4, 8e4, 3e5]), # cells/mL
+    :Aphy => Int.([3e4, 3e5]), # cells/mL
     :L => [ # μm
         @onlyif(:Aphy == 3e4, 2150),
         @onlyif(:Aphy == 8e4, 1550),
