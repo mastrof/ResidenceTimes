@@ -12,7 +12,7 @@ end
 
 allfiles = readdir(datadir("comm_7classes"))
 for fname in allfiles
-    fout = replace(fname, "comm" => "ids_$(lo)-$(hi)")
+    fout = replace(fname, "comm" => "ids$(lo)-$(hi)")
     isfile(datadir("comm_7classes_ids", fout)) && continue
     df = CSV.read(datadir("comm_7classes", fname), DataFrame)
     gdf = groupby(df, :id)
