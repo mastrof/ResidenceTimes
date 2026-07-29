@@ -7,29 +7,47 @@ using Distributed
     using MicrobeAgents
 end
 
-# exposure distributions
-# R = [1, 3, 10] # μm
-# mot = ["RT", "RR", "RRF"]
-# dt = [0.1] # s
-# U = [10, 20, 40] # μm/s
-# λ = [2.2, 0.5, 0.1] # 1/s
-# L = [1000] # μm
-# Cs = [0, 0.1, 1, 3] # μM
-# Cb = [0.03] # μM
-# relative exposure vs R --- only RRF
-# R = [1, 3, 10] # μm
-# R = [2, 4, 5, 7] # μm
-R = [
-    2, 4, 5, 7,
-    @onlyif("U" == 60 || "U" == 80, [1, 3, 10])...
-] # μm
-mot = ["RRF"]
+#== exposure distributions ==#
+R = [0.5, 1, 3, 10] # μm
+mot = ["RT", "RR", "RRF"]
 dt = [0.1] # s
-U = [10, 20, 40, 60, 80] # μm/s
-λ = [2.2, 0.1] # 1/s
+U = [10, 20, 40] # μm/s
+# λ = [2.2, 0.1] # 1/s
+λ = [2.2] # 1/s
 L = [1000] # μm
-Cs = [0, 1] # μM
+# Cs = [0, 0.1, 1, 3] # μM
+# Cs = [0.0, 1.0] # μM
+Cs = [
+    @onlyif("R" == 0.5, 0.24),
+    @onlyif("R" == 1.0, 0.58),
+    @onlyif("R" == 3.0, 2.4),
+    @onlyif("R" == 10.0, 11.0),
+]
 Cb = [0.03] # μM
+#== relative exposure vs R --- only RRF ==#
+# R = [0.5] # μm
+# R = [
+#     2, 4, 5, 7,
+#     @onlyif("U" == 60 || "U" == 80, [1, 3, 10])...
+# ] # μm
+# mot = ["RRF"]
+# dt = [0.1] # s
+# U = [10, 20, 40, 60, 80] # μm/s
+# λ = [2.2, 0.1] # 1/s
+# L = [1000] # μm
+# Cs = [0, 1] # μM
+# Cb = [0.03] # μM
+#== diffusivity matching RR vs RT ==#
+# R = [1.0, 3.0] # μm
+# mot = ["RR"]
+# dt = [0.1] # s
+# λ = [2.2] # 1/s
+# L = [1000] # μm
+# Cs = [1] # μM
+# Cb = [0.03] # μM
+# Dr = 0.035 # rad²/s --- same in all simulations
+# τ = 1/λ[1] # s
+# U = [10, 20, 40] ./ sqrt((1+2*Dr*τ)/(2*(1+Dr*τ))) # μm/s
 allparams = @strdict R mot dt U λ L Cs Cb
 dicts = dict_list(allparams)
 
