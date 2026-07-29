@@ -49,10 +49,10 @@ function makeplot(exposure, R, U, mot, Cs)
 end
 
 Rs = [1, 3, 10]
-Us = [25, 45]
+Us = [20, 40]
 mots = ["RR", "RRF", "RT"]
 for R in Rs, U in Us, mot in mots
-    datasets = collect_datasets(datadir("brumley");
+    datasets = collect_datasets(datadir("exposure");
         R=R,
         U=U,
         mot=mot
@@ -61,7 +61,7 @@ for R in Rs, U in Us, mot in mots
     gdata = groupby(datasets, [:Cs, :R, :U, :mot])
     exposure = map(collect(gdata)) do dataset
         gdf = groupby(dataset, :id)
-        [sum(g.c) / nrow(g) for g in gdf]
+        [sum(g.c_sum) / nrow(g) for g in gdf]
     end
     Cs = sort(unique(datasets.Cs))
     fig = makeplot(exposure, R, U, mot, Cs)
