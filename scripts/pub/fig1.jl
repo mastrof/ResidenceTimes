@@ -66,6 +66,7 @@ df = collect_datasets(datadir("comm_7classes");
     Aphy=30000,
     PER=0.3,
     α=1.0,
+    mot="RRF"
 )
 gdf = groupby(df, [:U, :PER, :Aphy, :α])
 # x = logrange(1e-4, maximum(df.c); length=80)
