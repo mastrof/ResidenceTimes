@@ -12,12 +12,12 @@ end
 
 allfiles = readdir(datadir("comm_7classes"))
 for fname in allfiles
+    lo, hi = 1, 99
     fout = replace(fname, "comm" => "ids$(lo)-$(hi)")
     isfile(datadir("comm_7classes_ids", fout)) && continue
     df = CSV.read(datadir("comm_7classes", fname), DataFrame)
     gdf = groupby(df, :id)
     mean_exposures = [mean(g.c) for g in gdf]
-    lo, hi = 1, 99
     ids = find_ids_extremal_performers(mean_exposures, lo, hi)
     CSV.write(
         datadir("comm_7classes_ids", fout),
