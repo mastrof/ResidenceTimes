@@ -46,9 +46,6 @@ for fname in filenames
     )
     gdf = groupby(df, :id)
     ids, es = eachcol(CSV.read(datadir("comm_7classes_ids", replace(fname, "comm"=>"ids1-99")), DataFrame))
-    q = sortperm(es)
-    lo = q[1:1000]
-    hi = q[1001:end]
     hotspot_threshold = 0.063 # μM
     encounters, residencetimes = hotspot_encounters(gdf, hotspot_threshold)
     restime_per_encounter = sum.(residencetimes) ./ encounters
