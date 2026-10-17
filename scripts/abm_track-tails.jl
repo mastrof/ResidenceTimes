@@ -1,0 +1,75 @@
+using Distributed
+@everywhere using DrWatson
+@everywhere @quickactivate "ResidenceTimes"
+@everywhere begin
+    using ResidenceTimes
+    using DataFrames
+    using MicrobeAgents
+end
+
+# exposure distributions
+# R = [1, 3, 10] # μm
+# mot = ["RT", "RR", "RRF"]
+# dt = [0.1] # s
+# U = [10, 20, 40] # μm/s
+# λ = [2.2, 0.5, 0.1] # 1/s
+# L = [1000] # μm
+# Cs = [0, 0.1, 1, 3] # μM
+# Cb = [0.03] # μM
+# relative exposure vs R --- only RRF
+# R = [1, 3, 10] # μm
+# R = [2, 4, 5, 7] # μm
+R = [
+    2, 4, 5, 7,
+    @onlyif("U" == 60 || "U" == 80, [1, 3, 10])...
+] # μm
+mot = ["RRF"]
+dt = [0.1] # s
+U = [10, 20, 40, 60, 80] # μm/s
+λ = [2.2, 0.1] # 1/s
+L = [1000] # μm
+Cs = [0, 1] # μM
+Cb = [0.03] # μM
+allparams = @strdict R mot dt U λ L Cs Cb
+dicts = dict_list(allparams)
+
+@everywhere function run_abm(config::Dict)
+    @unpack R, mot, dt, U, λ, L, Cs, Cb = config
+    γ = 150
+    # read ids of 1% best and worst performers
+    # run the simulation with same random seed
+    # and track the full trajectory of only these bacteria
+    model = setup_abm(; R, mot, dt, U, λ, L, Cs, Cb, γ, n=50_000)
+    simtime = 75 # minutes
+    nsteps = round(Int, simtime * 60 / dt)
+    # radial distance from source
+    r(a) = distance(a, chemoattractant(model).origin, model)
+    # normalized concentration value at position
+    cellradius = radius(model[1])
+    c_max = exp(-cellradius/γ) * R / (R+cellradius)
+    function _c(a)
+        r = distance(a, chemoattractant(model).origin, model)
+        exp(-(r-R)/γ) * R / r / c_max
+    end # =1 when cell and phytoplankton are in contact
+    c(a) = _c(a) # HACK: somehow necessary for correct naming
+    adata = [r, c]
+    # do not collect during first 30 minutes equilibration
+    # then collect every 45 seconds
+    when(model, t) = t >= 18_000 && t % 450 == 0
+    adf, = run!(model, nsteps; adata, when)
+    # rename because local functions don't respect names
+    colnames = names(adf)
+    rename!(adf,
+        Symbol(colnames[end-1]) => :r,
+        Symbol(colnames[end]) => :c,
+    )
+    adf
+end
+
+pmap(dicts) do config
+    @show config
+    data = run_abm(config)
+    on_cluster = haskey(ENV, "SCRATCH")
+    fileout = datadir("abm", savename("abm", config, "csv"); on_cluster)
+    wsave(fileout, data)
+end

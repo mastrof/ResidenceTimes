@@ -36,7 +36,7 @@ filenames = filter(
     readdir(datadir("comm_7classes_proc"))
 )
 
-data = map(filenames[1:2]) do fname
+data = map(filenames[3:4]) do fname
     df = CSV.read(
         datadir("comm_7classes_proc", fname),
         DataFrame;
@@ -80,18 +80,23 @@ let
         y1 = enc_lowU[:hi] .* (60/45)
         y2 = enc_hiU[:hi] .* (60/45)
         hist!(ax, y1;
-            bins=0:10:400,
+            # bins=0:10:400,
+            bins=0:5:250,
             normalization=:pdf,
             color=colors[1]*"77",
         )
         hist!(ax, y2;
-            bins=0:10:400,
+            # bins=0:10:400,
+            bins=0:5:250,
             normalization=:pdf,
             color=colors[2]*"77",
         )
-        f1 = fit(Gamma, y1)
-        f2 = fit(Gamma, y2)
-        x = 0..400
+        # f1 = fit(Gamma, y1)
+        # f2 = fit(Gamma, y2)
+        f1 = kde(y1)
+        f2 = kde(y2)
+        # x = 0..400
+        x = 0..250
         lines!(ax, x, x -> pdf(f1, x);
             color=colors[1],
             # linewidth=3,
@@ -129,6 +134,15 @@ let
             bins=logrange(1, 1e3; length=30),
             normalization=:pdf,
             color=colors[2]*"77",
+        )
+        f1 = kde(y1)
+        f2 = kde(y2)
+        x = logrange(1, 1e3; length=1000)
+        lines!(ax, x, x -> clamp(pdf(f1, x), 1e-4, Inf);
+            color=colors[1],
+        )
+        lines!(ax, x, x -> clamp(pdf(f2, x), 1e-4, Inf);
+            color=colors[2],
         )
         ylims!(ax, 1e-4, nothing)
         xlims!(ax, 1, nothing)

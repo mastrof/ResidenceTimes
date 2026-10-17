@@ -2,7 +2,7 @@
 
 julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "3e023bbd2e0d412a14ab684a5ea64496eeb0bb98"
+project_hash = "2ba07271119de34fa2bfcfaef60750491a12c900"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -407,6 +407,12 @@ deps = ["AdaptivePredicates", "EnumX", "ExactPredicates", "Random"]
 git-tree-sha1 = "c55f5a9fd67bdbc8e089b5a3111fe4292986a8e8"
 uuid = "927a84f5-c5f4-47a5-9785-b46e178433df"
 version = "1.6.6"
+
+[[deps.DelimitedFiles]]
+deps = ["Mmap"]
+git-tree-sha1 = "9e2f36d3c96a820c678f2f1f1782582fcf685bae"
+uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+version = "1.9.1"
 
 [[deps.Distances]]
 deps = ["LinearAlgebra", "Statistics", "StatsAPI"]
@@ -1179,9 +1185,9 @@ version = "1.1.4"
 
 [[deps.NearestNeighbors]]
 deps = ["AbstractTrees", "Distances", "StaticArrays"]
-git-tree-sha1 = "e2c3bba08dd6dedfe17a17889131b885b8c082f0"
+git-tree-sha1 = "576eb4656529c12e77a46b17c23103dfba9fa570"
 uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
-version = "0.4.27"
+version = "0.4.29"
 
 [[deps.Netpbm]]
 deps = ["FileIO", "ImageCore", "ImageMetadata"]
