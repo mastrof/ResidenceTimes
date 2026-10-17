@@ -18,6 +18,7 @@ function setup_abm(;
     Γ=50.0, # chemotactic gain
     κ=50.0, # receptor gain (1/μM)
     τm=1.3, # chemotactic memory time (s)
+    a=0.5, # bacterial radius (μm)
     rng=Xoshiro(1)
 )
     space = ContinuousSpace(fill(L, SVector{3}); periodic)
@@ -34,10 +35,11 @@ function setup_abm(;
         rng,
     )
     for i in 1:n
-        add_agent!(model;
+        pos = random_free_position(model; radius=a)
+        add_agent!(pos, model;
             motility=make_motility(mot, U, λ),
             rotational_diffusivity=Drot,
-            radius=0.5, # μm
+            radius=a,
             behaviors=(Brumley(; chemotactic_precision=Π, gain=Γ, gain_receptor=κ, memory=τm),),
         )
     end
@@ -65,6 +67,7 @@ function setup_abm_community(;
     Γ=50.0, # chemotactic gain
     κ=50.0, # receptor gain (1/μM)
     τm=1.3, # chemotactic memory time (s)
+    a=0.5, # bacterial radius (μm)
     teq=0.0, # equilibration time (s) before exposure starts accumulating
     rng=Xoshiro(1), # seed
 )
@@ -106,10 +109,11 @@ function setup_abm_community(;
         rng,
     )
     for i in 1:n
-        add_agent!(model;
+        pos = random_free_position(model; radius=a)
+        add_agent!(pos, model;
             motility=make_motility(mot, U, λ),
             rotational_diffusivity=Drot,
-            radius=0.5, # μm
+            radius=a,
             behaviors=(Brumley(; chemotactic_precision=Π, gain=Γ, gain_receptor=κ, memory=τm),),
         )
     end
