@@ -71,7 +71,7 @@ function gradient_exp(microbe, model)
     r = sqrt(r2)
     r3 = r * r2
     return SVector{3}(
-        r >= R ? -(γ+r)*Cs*exp(-(r-R)/γ) / (γ*r3) * x : 0.0
+        r >= R ? -(γ+r)*Cs*R*exp(-(r-R)/γ) / (γ*r3) * x : 0.0
         for x in rvec
     )
 end
@@ -134,7 +134,7 @@ function _gradient(r, rvec, R, Cs, γ)::SVector{3,Float64}
     r3 = r * r * r
     if r >= R
         SVector{3,Float64}(
-            -(γ+r)*Cs*exp(-(r-R)/γ) / (γ*r3) * x
+            -(γ+r)*Cs*R*exp(-(r-R)/γ) / (γ*r3) * x
             for x in rvec
         )
     else

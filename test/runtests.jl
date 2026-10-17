@@ -113,3 +113,25 @@ end
     end
 end
 
+@testset "gradients match finite differences" begin
+    h = 1e-5
+    e(k) = SVector(ntuple(==(k), 3)) .* 1.0
+    # community kernel
+    C, G = ResidenceTimes._concentration, ResidenceTimes._gradient
+    R, Cs, γ = 5.0, 1.0, 150.0
+    for x in (SVector(12.0, 3.0, -4.0), SVector(-6.0, 0.5, 1.0), SVector(40.0, -80.0, 25.0))
+        fd = SVector(ntuple(k -> (C(norm(x + h*e(k)), R, Cs, γ) - C(norm(x - h*e(k)), R, Cs, γ)) / 2h, 3))
+        @test G(norm(x), x, R, Cs, γ) ≈ fd rtol=1e-6
+    end
+    # single-source field
+    model = setup_abm(; n=1, L=1000.0, R=5.0, Cs=1.0)
+    a = model[1]
+    origin = chemoattractant(model).origin
+    cfield(p) = (a.pos = p; ResidenceTimes.field_exp(a, model))
+    for x in (SVector(12.0, 3.0, -4.0), SVector(40.0, -80.0, 25.0))
+        p = origin + x
+        fd = SVector(ntuple(k -> (cfield(p + h*e(k)) - cfield(p - h*e(k))) / 2h, 3))
+        a.pos = p
+        @test ResidenceTimes.gradient_exp(a, model) ≈ fd rtol=1e-6
+    end
+end
