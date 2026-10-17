@@ -23,31 +23,22 @@ function setup_abm(;
     space = ContinuousSpace(fill(L, SVector{3}); periodic)
     origin = fill(L/2, SVector{3})
     chemo = ExpField(origin, R, Cs, Cb, γ)
+    source = Obstacles(space, [ObstacleSphere(origin, R)]; contact=HaltUntilTumble())
     properties = Dict(
-        :chemoattractant => chemo
+        :chemoattractant => chemo,
+        :obstacles => (source,),
     )
-    N = (mot == "RT" ? 2 : 4)
-    model = StandardABM(Brumley{3,N}, space, dt;
+    model = StandardABM(microbe_type(mot), space, dt;
         properties,
         container=Vector,
-        agent_step! = microbe_step_collision!,
         rng,
     )
     for i in 1:n
-        motility = if mot == "RT"
-            RunTumble([U], 1/λ, Isotropic(3))
-        elseif mot == "RR"
-            RunReverse([U], 1/λ, [U], 1/λ)
-        elseif mot == "RRF"
-            RunReverseFlick([U], 1/λ, [U], 1/λ)
-        end
         add_agent!(model;
-            motility,
+            motility=make_motility(mot, U, λ),
             rotational_diffusivity=Drot,
-            chemotactic_precision=Π,
-            gain=Γ,
-            gain_receptor=κ,
-            memory=τm,
+            radius=0.5, # μm
+            behaviors=(Brumley(; chemotactic_precision=Π, gain=Γ, gain_receptor=κ, memory=τm),),
         )
     end
     return model
@@ -89,29 +80,18 @@ function setup_abm_community(;
         output_name=:measurements,
         parallel=false
     )
-    # μm: largest sphere + max step + margin. Safe because every motility is built
-    # with the single speed `[U]`, so a swimmer's step never exceeds U*dt; a pair
-    # closer than this cutoff is always tested. Revisit if speeds ever exceed U.
-    collision_cutoff = Rmax + U*dt + 2.0
-    collisionsystem = ParticleSystem(
-        xpositions=zeros(SVector{3,Float64}, n),
-        ypositions=phytoplankton_positions,
-        unitcell=spacesize(space),
-        cutoff=collision_cutoff,
-        output=OutCollision(ones(n)),
-        output_name=:measurements,
-        parallel=false
+    phytoplankton = Obstacles(space, ObstacleSphere.(phytoplankton_positions, phytoplankton_radii);
+        contact=HaltUntilTumble()
     )
     chemo = CommField(Cb, γ)
     properties = Dict(
         :neighborlist => system,
-        :collisionlist => collisionsystem,
+        :obstacles => (phytoplankton,),
         :phytoplankton_radii => phytoplankton_radii,
         :phytoplankton_leakage => phytoplankton_leakage,
         :chemoattractant => chemo,
     )
-    N = (mot == "RT" ? 2 : 4)
-    model = StandardABM(Brumley{3,N}, space, dt;
+    model = StandardABM(microbe_type(mot), space, dt;
         properties,
         container = Vector,
         agent_step! = dummystep,
@@ -119,25 +99,14 @@ function setup_abm_community(;
         rng,
     )
     for i in 1:n
-        motility = if mot == "RT"
-            RunTumble([U], 1/λ, Isotropic(3))
-        elseif mot == "RR"
-            RunReverse([U], 1/λ, [U], 1/λ)
-        elseif mot == "RRF"
-            RunReverseFlick([U], 1/λ, [U], 1/λ)
-        end
         add_agent!(model;
-            motility,
+            motility=make_motility(mot, U, λ),
             rotational_diffusivity=Drot,
-            chemotactic_precision=Π,
-            gain=Γ,
-            gain_receptor=κ,
-            memory=τm,
+            radius=0.5, # μm
+            behaviors=(Brumley(; chemotactic_precision=Π, gain=Γ, gain_receptor=κ, memory=τm),),
         )
     end
     abmproperties(model).neighborlist.xpositions .=
-        position.(allagents(model))
-    abmproperties(model).collisionlist.xpositions .=
         position.(allagents(model))
     map_pairwise!(
         (x,y,i,j,d2,out) -> comm_out!(x,y,i,j,d2,out,model),
@@ -188,26 +157,15 @@ function leaked_concentration(R, PER;
 end
 
 function community_step!(model)
-    collisionlist = abmproperties(model)[:collisionlist]
     nlist = abmproperties(model)[:neighborlist]
 
-    # 1. detect collisions on the current (pre-move) positions
-    for i in allids(model)
-        collisionlist.xpositions[i] = position(model[i])
-    end
-    map_pairwise!(
-        (x, y, i, j, d2, out) -> collision_out!(x, y, i, j, d2, out, model),
-        collisionlist
-    )
-    αmin = collisionlist.measurements.αmin
-
-    # 2. move every swimmer with surface clamping, then rotational diffusion
+    # 1. move every swimmer (surface contacts resolved by the obstacles),
+    #    then rotational diffusion
     for microbe in allagents(model)
-        resolve_collision!(microbe, model, αmin[microbe.id])
-        rotational_diffusion!(microbe, model)
+        move_step!(microbe, model)
     end
 
-    # 3. recompute concentration + gradient at the new positions
+    # 2. recompute concentration + gradient at the new positions
     for i in allids(model)
         nlist.xpositions[i] = position(model[i])
     end
@@ -216,9 +174,24 @@ function community_step!(model)
         nlist
     )
 
-    # 4. chemotactic update and reorientation
+    # 3. chemotactic update and reorientation
     for microbe in allagents(model)
         affect_step!(microbe, model)
         reorient_step!(microbe, model)
     end
 end
+
+function make_motility(mot, U, λ)
+    if mot == "RT"
+        RunTumble([U], 1/λ, Isotropic(3))
+    elseif mot == "RR"
+        RunReverse([U], 1/λ, [U], 1/λ)
+    elseif mot == "RRF"
+        RunReverseFlick([U], 1/λ, [U], 1/λ)
+    else
+        throw(ArgumentError("unknown motility pattern $mot"))
+    end
+end
+
+# concrete agent type, so that the `Vector` container is concretely typed
+microbe_type(mot) = Microbe{3, (mot == "RT" ? 2 : 4), Tuple{Brumley}}
