@@ -1,0 +1,403 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\newcommand{\vect}[1]{\mathbf{#1}}
+\newcommand{\erfc}{\operatorname{erfc}}
+\newcommand{\um}{\,\mu\mathrm{m}}
+
+\title{Ewald summation of the chemoattractant field\\ of a periodic phytoplankton community}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Chemoattractant field}
+
+Each phytoplankton cell $j$ is a sphere of radius $R_j$ centred at $\vect{c}_j$ that releases
+chemoattractant at a constant rate. The chemoattractant diffuses and is consumed at a constant
+rate, which defines a decay length $\gamma$. At steady state, the concentration outside an isolated
+cell is
+\begin{equation}
+  C_j(r) = C_{s,j}\,\frac{R_j}{r}\,e^{-(r-R_j)/\gamma}, \qquad r = |\vect{x}-\vect{c}_j| \ge R_j,
+  \label{eq:single}
+\end{equation}
+where $C_{s,j}$ is the concentration at the cell surface. Outside the cell, Eq.~\eqref{eq:single}
+is the field of a point source at $\vect{c}_j$,
+\begin{equation}
+  C_j(r) = Q_j\,G(r), \qquad G(r) = \frac{e^{-r/\gamma}}{r}, \qquad Q_j = C_{s,j}\,R_j\,e^{R_j/\gamma},
+  \label{eq:pointsource}
+\end{equation}
+where $G$ is the screened Coulomb (Yukawa) kernel. This representation is exact for $r \ge R_j$,
+which is the only region where the field is needed, since bacteria cannot enter the cells.
+
+The community is a set of $N_s$ cells in a cubic box of side $L$ with periodic boundary conditions.
+The concentration at a point $\vect{x}$ in the fluid is the sum of the contributions of all cells
+and of all their periodic images,
+\begin{equation}
+  C(\vect{x}) = C_b + \sum_{j=1}^{N_s} \sum_{\vect{n}\in\mathbb{Z}^3} Q_j\,
+  G\bigl(|\vect{x} - \vect{c}_j - \vect{n}L|\bigr),
+  \label{eq:fullsum}
+\end{equation}
+where $C_b$ is a uniform background. The sum converges absolutely because $G$ decays exponentially,
+but the number of terms that contribute is large when $\gamma$ is comparable to or larger than the
+distance between cells. Each bacterium needs $C$ and $\nabla C$ at its position at every time step,
+so we evaluate Eq.~\eqref{eq:fullsum} by Ewald summation.
+
+\section{Ewald splitting of the screened kernel}
+
+We split the kernel into a short-range and a long-range part,
+$G = G_{\mathrm{near}} + G_{\mathrm{far}}$, using the standard Ewald splitting for Yukawa
+interactions~\cite{Ewald1921,SalinCaillol2000}. With $\kappa = 1/\gamma$ and a splitting length
+$\sigma$, the long-range part is defined by its Fourier transform,
+\begin{equation}
+  \hat G_{\mathrm{far}}(k) = \frac{4\pi}{k^2+\kappa^2}\,e^{-(k^2+\kappa^2)\sigma^2/4},
+  \label{eq:gfar_k}
+\end{equation}
+which is the Fourier transform of $G$, $4\pi/(k^2+\kappa^2)$, multiplied by a Gaussian. In real
+space,
+\begin{align}
+  G_{\mathrm{far}}(r) &= \frac{1}{2r}\Bigl[e^{-\kappa r}\erfc\!\Bigl(\frac{\kappa\sigma}{2} - \frac{r}{\sigma}\Bigr)
+    - e^{\kappa r}\erfc\!\Bigl(\frac{\kappa\sigma}{2} + \frac{r}{\sigma}\Bigr)\Bigr], \\
+  G_{\mathrm{near}}(r) &= \frac{1}{2r}\Bigl[e^{-\kappa r}\erfc\!\Bigl(\frac{r}{\sigma} - \frac{\kappa\sigma}{2}\Bigr)
+    + e^{\kappa r}\erfc\!\Bigl(\frac{r}{\sigma} + \frac{\kappa\sigma}{2}\Bigr)\Bigr].
+  \label{eq:gnear}
+\end{align}
+$G_{\mathrm{far}}$ is smooth and finite at $r=0$ and tends to $G$ for $r \gg \sigma$.
+$G_{\mathrm{near}}$ carries the $1/r$ singularity and decays like $\erfc(r/\sigma)$, i.e.\ it is
+negligible beyond a few $\sigma$. The Gaussian factor in Eq.~\eqref{eq:gfar_k} contains
+$k^2+\kappa^2$ rather than $k^2$ alone; this is what makes $G_{\mathrm{far}} \to G$ at large
+distance, so that $G_{\mathrm{near}}$ vanishes there. The radial derivative used for the gradient is
+\begin{equation}
+  \frac{dG_{\mathrm{near}}}{dr} = \frac{1}{2r}\Bigl[\kappa\,e^{\kappa r}\erfc(u+a) - \kappa\,e^{-\kappa r}\erfc(u-a)
+    - \frac{4}{\sigma\sqrt{\pi}}\,e^{-u^2-a^2}\Bigr] - \frac{G_{\mathrm{near}}(r)}{r},
+\end{equation}
+with $u = r/\sigma$ and $a = \kappa\sigma/2$.
+
+The concentration is then $C = C_b + C_{\mathrm{near}} + C_{\mathrm{far}}$, where each part is
+Eq.~\eqref{eq:fullsum} with $G$ replaced by $G_{\mathrm{near}}$ or $G_{\mathrm{far}}$.
+The two parts are computed with different methods.
+
+\section{Short-range part}
+
+The short-range part is summed directly over cells closer than a cutoff $r_c$,
+\begin{equation}
+  C_{\mathrm{near}}(\vect{x}) = \sum_{j:\,r_j<r_c} Q_j\,G_{\mathrm{near}}(r_j), \qquad
+  \nabla C_{\mathrm{near}}(\vect{x}) = \sum_{j:\,r_j<r_c} Q_j\,\frac{dG_{\mathrm{near}}}{dr}(r_j)\,\frac{\vect{r}_j}{r_j},
+\end{equation}
+where $\vect{r}_j$ is the minimum-image separation between $\vect{x}$ and $\vect{c}_j$, and
+$r_j = |\vect{r}_j|$. The pairs are found with a cell list~\cite{CellListMap}. Since
+$r_c < L/2$, at most one image of each cell lies within the cutoff, and the minimum image is
+sufficient. The cost per step is proportional to the number of bacteria times the mean number of
+cells within $r_c$, $\rho_s\,\tfrac{4}{3}\pi r_c^3$, where $\rho_s = N_s/L^3$.
+
+\section{Long-range part}
+
+\paragraph{Fourier representation.}
+By the Poisson summation formula, the periodic sum of the long-range part is a Fourier series over
+the wave vectors $\vect{k} = 2\pi\vect{n}/L$ of the box,
+\begin{equation}
+  C_{\mathrm{far}}(\vect{x}) = \frac{1}{L^3}\sum_{\vect{k}} \hat G_{\mathrm{far}}(k)\,S(\vect{k})\,e^{i\vect{k}\cdot\vect{x}},
+  \qquad S(\vect{k}) = \sum_{j=1}^{N_s} Q_j\,e^{-i\vect{k}\cdot\vect{c}_j}.
+  \label{eq:fourier}
+\end{equation}
+Because of the Gaussian factor in Eq.~\eqref{eq:gfar_k} the series converges rapidly, and we keep
+the $M^3$ wave vectors with $|n_\alpha| < M/2$ in each direction ($M$ even; the Nyquist modes
+$n_\alpha = M/2$ are set to zero so that the truncated series is real). The largest neglected
+wavenumber is $k_{\max} = \pi M/L = \pi/h$, with $h = L/M$, and the neglected terms are smaller than
+the retained ones by a factor of order
+\begin{equation}
+  \varepsilon_k = e^{-\pi^2\sigma^2/(4h^2)}.
+  \label{eq:eps_k}
+\end{equation}
+The $k=0$ term is finite, $4\pi\gamma^2 e^{-\sigma^2/4\gamma^2} \sum_j Q_j/L^3$, so no
+neutrality condition is needed, unlike the Coulomb case.
+
+\paragraph{Structure factor.}
+The structure factor $S(\vect{k})$ on the $M^3$ wave vectors is a type-1 non-uniform fast Fourier
+transform (NUFFT) of the source strengths $Q_j$ at the positions $\vect{c}_j$~\cite{Barnett2019}.
+It is computed with NonuniformFFTs.jl~\cite{NonuniformFFTs}: the sources are spread onto an oversampled grid
+of $(2M)^3$ points with a backwards Kaiser--Bessel kernel of half-support $m$, the grid is
+transformed by FFT, and the kernel is deconvolved. The use of a NUFFT for the structure factor is
+the approach of spectral Ewald methods~\cite{LindboTornberg2011}.
+
+\paragraph{Mesh.}
+The Fourier coefficients $\hat G_{\mathrm{far}}(k) S(\vect{k})/L^3$ are transformed to real space
+by an inverse real FFT~\cite{FFTW}, which gives $C_{\mathrm{far}}$ at the $M^3$ nodes
+$\vect{x}_{\vect{i}} = (\vect{i}-1)\,h$ of a uniform mesh with spacing $h = L/M$. These nodal
+values are the truncated series Eq.~\eqref{eq:fourier}, exactly up to the NUFFT tolerance. The
+cell positions do not change during a simulation, so this step is done once, when the model is
+set up.
+
+\paragraph{Interpolation.}
+At every step $C_{\mathrm{far}}$ and $\nabla C_{\mathrm{far}}$ are evaluated at the bacterial
+positions by periodic cubic B-spline interpolation of the mesh values~\cite{Unser1993}, as in
+smooth particle-mesh Ewald~\cite{Darden1993,Essmann1995}. We use Interpolations.jl~\cite{Interpolations}
+(\texttt{BSpline(Cubic(Periodic(OnCell())))}). The B-spline coefficients are obtained once, at
+setup, by solving the periodic prefilter system along each axis, so that the interpolant passes
+through the mesh values. The \texttt{OnCell} variant is the one whose period is $M$ nodes, which
+matches the FFT mesh, where node $M+1$ is node $1$. Each evaluation combines the $4^3$ coefficients
+around the point, and the gradient is the analytic derivative of the spline. The interpolation
+error of a cubic spline is $O(h^4)$ for the value and $O(h^3)$ for the gradient, relative to the
+length scale over which the interpolated function varies. Here that length scale is $\sigma$,
+because the Fourier spectrum of $C_{\mathrm{far}}$ is cut off by $e^{-k^2\sigma^2/4}$. The accuracy
+of the long-range part is therefore set by the ratio $h/\sigma$.
+
+The cost per step is a fixed number of operations per bacterium, independent of $N_s$, $\sigma$ and
+$L$. The setup costs $O(N_s m^3)$ for spreading and $O(M^3\log M)$ for the FFTs, and the mesh uses
+$8M^3$ bytes, with $M \approx 2.4\,L/\sigma$ for the parameters below.
+
+\section{Algorithm}
+
+At setup: (i) compute $Q_j$ from Eq.~\eqref{eq:pointsource}; (ii) compute $S(\vect{k})$ by NUFFT;
+(iii) multiply by $\hat G_{\mathrm{far}}(k)/L^3$ and transform to the mesh; (iv) compute the
+B-spline coefficients. At every time step, after all bacteria have moved: (v) update the cell list
+and sum the short-range part over the neighbouring cells; (vi) add the interpolated long-range part
+and its gradient. The resulting $C$ and $\nabla C$ are then used by the chemotaxis model of each
+bacterium.
+
+\section{Parameters}
+
+\begin{table}[h]
+  \centering\small
+  \begin{tabular}{llll}
+    \toprule
+    Parameter & Symbol & Value & Controls \\
+    \midrule
+    Splitting length & $\sigma$ & $40\um$ & short- vs.\ long-range cost \\
+    Short-range cutoff & $r_c$ & $3.5\,\sigma = 140\um$ & truncation of the short-range part \\
+    Mesh spacing & $h$ & $\le \sigma/2.4 = 16.7\um$ & interpolation error \\
+    Mesh size & $M$ & $2\lceil L/2h\rceil$ & --- \\
+    NUFFT kernel half-support & $m$ & 8 & NUFFT tolerance \\
+    NUFFT oversampling & & 2 & (NonuniformFFTs.jl default) \\
+    \bottomrule
+  \end{tabular}
+  \caption{Numerical parameters of the Ewald summation. The physical parameters are
+    $\gamma = 150\um$ and the community composition.}
+  \label{tab:params}
+\end{table}
+
+The choices in Table~\ref{tab:params} are based on the tests below. We require a relative error of
+at most $10^{-3}$ on $C$ and $10^{-2}$ on $\nabla C$ everywhere in the fluid, and choose the
+parameters that meet this requirement at the lowest cost.
+
+\subsection{Accuracy tests}
+
+\paragraph{Test system.} A community of $N_s = 153$ cells (abundance $3\times10^5$\,mL$^{-1}$,
+allometric exponent $\alpha=1$, radii $0.65$--$10\um$) in a periodic box of side $L = 800\um$, with
+$\gamma = 150\um$. We evaluate the field at 400 points: 200 at random positions $0.5$--$5\um$ from
+the surface of a randomly chosen cell, where the field and its gradient are largest, and 200 at
+uniformly random positions in the fluid.
+
+\paragraph{Reference.} The reference is the direct sum, Eq.~\eqref{eq:fullsum}, over all cells and
+all periodic images closer than $18\gamma = 2700\um$, using the exact single-cell field
+Eq.~\eqref{eq:single} and its gradient. Extending the sum to $24\gamma$ changes $C$ by less than
+$2\times10^{-7}$ and $\nabla C$ by less than $3\times10^{-10}$ (relative), so the reference is
+accurate well beyond the errors below.
+
+\paragraph{Error measures.} For each point we compute the relative error of the concentration,
+$|\delta C|/C$, and of the gradient, $|\delta\nabla C|/|\nabla C|$. Far from all cells the
+contributions of different cells partly cancel and $|\nabla C|$ can be much smaller than its
+typical scale $C/\gamma$. There the relative gradient error is large even when the absolute error is
+small, so we also report $|\delta\nabla C|/(C/\gamma)$. Tables~\ref{tab:h}--\ref{tab:sigma} give
+the median and the maximum over the 400 points. In each test one parameter is varied and the
+others are set to values at which their own contribution to the error is negligible.
+
+\begin{table}[h]
+  \centering\small
+  \begin{tabular}{lllllll}
+    \toprule
+    $\sigma/h$ & $h$ ($\mu$m) & $|\delta C|/C$ med. & max & $|\delta\nabla C|/|\nabla C|$ med. & max & $|\delta\nabla C|/(C/\gamma)$ max \\
+    \midrule
+    1.2 & 33.3 & $4.8\times10^{-4}$ & $4.4\times10^{-3}$ & $1.1\times10^{-3}$ & $6.4\times10^{-2}$ & $3.4\times10^{-2}$ \\
+    1.6 & 25.0 & $9.3\times10^{-5}$ & $9.0\times10^{-4}$ & $2.4\times10^{-4}$ & $1.2\times10^{-2}$ & $1.3\times10^{-2}$ \\
+    2.0 & 20.0 & $2.9\times10^{-5}$ & $4.1\times10^{-4}$ & $9.8\times10^{-5}$ & $4.8\times10^{-3}$ & $5.1\times10^{-3}$ \\
+    \textbf{2.4} & \textbf{16.7} & $1.4\times10^{-5}$ & $9.7\times10^{-5}$ & $5.1\times10^{-5}$ & $3.7\times10^{-3}$ & $2.6\times10^{-3}$ \\
+    3.2 & 12.5 & $3.8\times10^{-6}$ & $3.5\times10^{-5}$ & $2.2\times10^{-5}$ & $1.6\times10^{-3}$ & $1.2\times10^{-3}$ \\
+    4.0 & 10.0 & $1.5\times10^{-6}$ & $9.6\times10^{-6}$ & $9.8\times10^{-6}$ & $7.8\times10^{-4}$ & $5.4\times10^{-4}$ \\
+    4.8 & 8.33 & $7.1\times10^{-7}$ & $5.6\times10^{-6}$ & $5.6\times10^{-6}$ & $3.1\times10^{-4}$ & $3.5\times10^{-4}$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{Error as a function of the mesh spacing ($\sigma = 40\um$, $r_c = 3.5\sigma$, $m = 8$).}
+  \label{tab:h}
+\end{table}
+
+\paragraph{Mesh spacing.} Table~\ref{tab:h} shows the error as a function of $\sigma/h$. For
+$\sigma/h \le 2$ the truncation of the Fourier series contributes: by Eq.~\eqref{eq:eps_k},
+$\varepsilon_k = 3\times10^{-2}$, $2\times10^{-3}$ and $5\times10^{-5}$ at $\sigma/h = 1.2$, $1.6$
+and $2.0$. From $\sigma/h = 2.4$ ($\varepsilon_k = 7\times10^{-7}$) on, the error is that of the
+cubic interpolation. Halving $h$ from $\sigma/2.4$ to $\sigma/4.8$ reduces the maximum error by a
+factor 17 on $C$ and 12 on $\nabla C$, consistent with the expected $O(h^4)$ and $O(h^3)$
+convergence. We use $h = \sigma/2.4$, the coarsest mesh that meets the accuracy requirement with a
+margin: the maximum error is $10^{-4}$ on $C$ and $4\times10^{-3}$ on $\nabla C$. Near the cell
+surfaces, where the short-range part dominates, the maximum gradient error is $1.3\times10^{-4}$;
+the largest relative gradient errors occur in the bulk, where $|\nabla C| \ll C/\gamma$. A finer
+mesh reduces the error further at a memory and setup cost proportional to $h^{-3}$.
+
+\begin{table}[h]
+  \centering\small
+  \begin{tabular}{lllll}
+    \toprule
+    $r_c/\sigma$ & $G_{\mathrm{near}}(r_c)/G(r_c)$ & $|\delta C|/C$ max & $|\delta\nabla C|/|\nabla C|$ max & $|\delta\nabla C|/(C/\gamma)$ max \\
+    \midrule
+    2.0 & $7.9\times10^{-3}$ & $1.5\times10^{-3}$ & $5.1\times10^{-2}$ & $2.5\times10^{-2}$ \\
+    2.5 & $7.8\times10^{-4}$ & $2.1\times10^{-4}$ & $1.1\times10^{-2}$ & $3.0\times10^{-3}$ \\
+    3.0 & $4.8\times10^{-5}$ & $6.4\times10^{-6}$ & $4.3\times10^{-4}$ & $3.5\times10^{-4}$ \\
+    \textbf{3.5} & $1.9\times10^{-6}$ & $5.6\times10^{-6}$ & $3.1\times10^{-4}$ & $3.5\times10^{-4}$ \\
+    4.0 & $4.4\times10^{-8}$ & $5.6\times10^{-6}$ & $3.1\times10^{-4}$ & $3.5\times10^{-4}$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{Error as a function of the short-range cutoff ($\sigma = 40\um$, $h = \sigma/4.8$,
+    $m = 8$). The second column is the fraction of the kernel that the short-range part still
+    carries at the cutoff.}
+  \label{tab:rc}
+\end{table}
+
+\paragraph{Short-range cutoff.} Table~\ref{tab:rc} uses a fine mesh ($h = \sigma/4.8$), so that the
+error from the cutoff is visible. The error stops decreasing at $r_c = 3\sigma$ and the remaining
+error is that of the mesh. We use $r_c = 3.5\sigma$, at which the short-range kernel is
+$2\times10^{-6}$ of the full kernel, so that the cutoff error is negligible compared to the
+interpolation error at $h = \sigma/2.4$. The cutoff also constrains the box size: the minimum-image
+convention requires $L > 2r_c = 7\sigma = 280\um$.
+
+\paragraph{NUFFT accuracy.} With $\sigma = 40\um$, $h = \sigma/4.8$ and $r_c = 3.5\sigma$, the
+maximum error on $C$ is $2.9\times10^{-4}$, $6.9\times10^{-6}$ and $5.6\times10^{-6}$ for kernel
+half-supports $m = 2$, $3$ and $4$, and does not change for $m = 6$ and $8$. The NUFFT error is thus
+below the other errors for $m \ge 4$. We use $m = 8$, which makes the NUFFT accurate to near machine
+precision. With $N_s \approx 300$ sources the spreading cost, $N_s(2m)^3$ operations, is negligible
+compared to the FFTs, so this choice is free.
+
+\begin{table}[h]
+  \centering\small
+  \begin{tabular}{llllll}
+    \toprule
+    $\sigma$ ($\mu$m) & $h$ ($\mu$m) & $|\delta C|/C$ max & $|\delta\nabla C|/|\nabla C|$ med. & max & $|\delta\nabla C|/(C/\gamma)$ max \\
+    \midrule
+    20 & 8.33 & $1.6\times10^{-4}$ & $5.5\times10^{-5}$ & $1.6\times10^{-3}$ & $5.4\times10^{-3}$ \\
+    30 & 12.5 & $1.1\times10^{-4}$ & $5.4\times10^{-5}$ & $1.6\times10^{-3}$ & $3.0\times10^{-3}$ \\
+    \textbf{40} & 16.7 & $9.7\times10^{-5}$ & $5.1\times10^{-5}$ & $3.7\times10^{-3}$ & $2.6\times10^{-3}$ \\
+    60 & 25.0 & $2.0\times10^{-4}$ & $4.5\times10^{-5}$ & $4.7\times10^{-3}$ & $2.3\times10^{-3}$ \\
+    80 & 33.3 & $1.4\times10^{-4}$ & $7.0\times10^{-5}$ & $6.8\times10^{-3}$ & $1.9\times10^{-3}$ \\
+    100 & 40.0 & $1.6\times10^{-4}$ & $5.3\times10^{-5}$ & $7.6\times10^{-3}$ & $1.2\times10^{-3}$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{Error as a function of the splitting length at fixed $h = \sigma/2.4$, $r_c = 3.5\sigma$,
+    $m = 8$.}
+  \label{tab:sigma}
+\end{table}
+
+\paragraph{Splitting length.} When $h$ and $r_c$ are scaled with $\sigma$, the error depends only
+weakly on $\sigma$ (Table~\ref{tab:sigma}): the maximum error on $C$ stays between $1$ and
+$2\times10^{-4}$, and the maximum gradient error stays below $10^{-2}$ for all
+$20\um \le \sigma \le 100\um$. The choice of $\sigma$ is therefore determined by cost.
+
+\subsection{Cost}
+
+\begin{table}[h]
+  \centering\small
+  \begin{tabular}{rrrrrrrrr}
+    \toprule
+    $L$ ($\mu$m) & $\sigma$ ($\mu$m) & $N_s$ & $M$ & mesh (MB) & setup (s) & near (s) & far (s) & full step (s) \\
+    \midrule
+    1000 & 20 & 298 & 120 & 13.8 & 0.53 & 0.020 & 0.078 & 0.29 \\
+    1000 & 30 & 298 & 80 & 4.1 & 0.13 & 0.035 & 0.066 & 0.31 \\
+    1000 & \textbf{40} & 298 & 60 & 1.7 & 0.02 & 0.057 & 0.052 & 0.34 \\
+    1000 & 60 & 298 & 40 & 0.5 & 0.09 & 0.144 & 0.055 & 0.40 \\
+    1000 & 80 & 298 & 30 & 0.2 & $<$0.01 & 0.305 & 0.061 & 0.56 \\
+    \midrule
+    2150 & 20 & 297 & 258 & 137.4 & 2.0 & 0.011 & 0.127 & 0.39 \\
+    2150 & 30 & 297 & 172 & 40.7 & 0.87 & 0.014 & 0.104 & 0.31 \\
+    2150 & \textbf{40} & 297 & 130 & 17.6 & 0.27 & 0.019 & 0.092 & 0.30 \\
+    2150 & 60 & 297 & 86 & 5.1 & 0.19 & 0.031 & 0.063 & 0.27 \\
+    2150 & 80 & 297 & 66 & 2.3 & 0.10 & 0.053 & 0.072 & 0.31 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Cost for $10^5$ bacteria in the two community configurations used in the simulations
+    (allometric exponent $\alpha = 0.85$, abundance $3\times10^5$ and $3\times10^4$\,mL$^{-1}$).
+    ``Setup'' is the construction of the long-range mesh; ``near'' and ``far'' are the times per
+    step of the short- and long-range parts over all bacteria; ``full step'' includes motion,
+    collisions and the chemotactic update of all bacteria. Single thread, AMD Ryzen 7 PRO 6850U,
+    Julia 1.11.5; minimum of 5 repetitions. Differences of about $0.02$\,s are within the
+    run-to-run variation.}
+  \label{tab:cost}
+\end{table}
+
+Table~\ref{tab:cost} shows the cost for $10^5$ bacteria in the two community configurations used in
+the simulations, $\approx 300$ cells in boxes of side $1000\um$ and $2150\um$. The short-range cost
+grows as $\sigma^3$, through the number of cells within $r_c$ of a bacterium,
+$\rho_s\,\tfrac{4}{3}\pi(3.5\sigma)^3$ (3.4 at $L = 1000\um$, $\sigma = 40\um$; 27 at
+$\sigma = 80\um$). The long-range cost per step depends weakly on $\sigma$, through the size of the
+mesh and therefore its cache efficiency. Its memory and setup cost grow as $(L/\sigma)^3$.
+
+In the denser configuration ($L = 1000\um$) the field costs about $0.1$\,s per step for
+$\sigma \le 40\um$ and becomes dominated by the short-range part for larger $\sigma$. We use
+$\sigma = 40\um$, the largest value before the short-range cost increases, because it gives the
+smallest mesh. This matters for larger boxes. At fixed $\sigma = 40\um$ the mesh has $M \approx L/16.7\um$ nodes per side, i.e.\
+$18$\,MB at $L = 2150\um$ and about $0.2$\,GB at $L = 5000\um$; at $\sigma = 20\um$ these would be
+$0.14$ and $1.7$\,GB. At $\sigma = 40\um$ the field takes about one third of the full time step; the
+rest is bacterial motion and chemotaxis. The cost per step does not depend on $L$ at fixed $N_s$.
+
+\section{Implementation}
+
+The method is implemented in Julia~1.11.5 in \texttt{src/ewald.jl} (long-range part and
+short-range kernel) and \texttt{src/model.jl} (\texttt{community\_field!}), using
+NonuniformFFTs.jl~0.9.7~\cite{NonuniformFFTs} for the NUFFT, FFTW.jl~1.10.0~\cite{FFTW} for the
+inverse FFT, Interpolations.jl~0.15.2~\cite{Interpolations} for the B-spline interpolation,
+SpecialFunctions.jl~2.9.0 for $\erfc$ and CellListMap.jl~0.9.17~\cite{CellListMap} for the
+neighbour list. The tests in \texttt{test/runtests.jl} compare the field against the direct
+periodic sum, and the derivative of $G_{\mathrm{near}}$ against finite differences. The numbers in
+this report are produced by \texttt{papers/ewald-report/parameter\_study.jl}.
+
+\begin{thebibliography}{99}
+
+\bibitem{Ewald1921}
+P.~P. Ewald, Die Berechnung optischer und elektrostatischer Gitterpotentiale,
+\emph{Ann.\ Phys.} \textbf{369}, 253--287 (1921).
+
+\bibitem{SalinCaillol2000}
+G.~Salin and J.-M. Caillol, Ewald sums for Yukawa potentials,
+\emph{J.\ Chem.\ Phys.} \textbf{113}, 10459--10463 (2000).
+
+\bibitem{Darden1993}
+T.~Darden, D.~York and L.~Pedersen, Particle mesh Ewald: An $N\log(N)$ method for Ewald sums in
+large systems, \emph{J.\ Chem.\ Phys.} \textbf{98}, 10089--10092 (1993).
+
+\bibitem{Essmann1995}
+U.~Essmann, L.~Perera, M.~L. Berkowitz, T.~Darden, H.~Lee and L.~G. Pedersen, A smooth particle
+mesh Ewald method, \emph{J.\ Chem.\ Phys.} \textbf{103}, 8577--8593 (1995).
+
+\bibitem{LindboTornberg2011}
+D.~Lindbo and A.-K. Tornberg, Spectral accuracy in fast Ewald-based methods for particle
+simulations, \emph{J.\ Comput.\ Phys.} \textbf{230}, 8744--8761 (2011).
+
+\bibitem{Barnett2019}
+A.~H. Barnett, J.~Magland and L.~af~Klinteberg, A parallel nonuniform fast Fourier transform
+library based on an ``exponential of semicircle'' kernel, \emph{SIAM J.\ Sci.\ Comput.}
+\textbf{41}, C479--C504 (2019).
+
+\bibitem{NonuniformFFTs}
+J.~I. Polanco, NonuniformFFTs.jl, \url{https://github.com/jipolanco/NonuniformFFTs.jl}.
+
+\bibitem{FFTW}
+M.~Frigo and S.~G. Johnson, The design and implementation of FFTW3, \emph{Proc.\ IEEE}
+\textbf{93}, 216--231 (2005).
+
+\bibitem{Unser1993}
+M.~Unser, A.~Aldroubi and M.~Eden, B-spline signal processing: Part I---Theory,
+\emph{IEEE Trans.\ Signal Process.} \textbf{41}, 821--833 (1993).
+
+\bibitem{Interpolations}
+Interpolations.jl, \url{https://github.com/JuliaMath/Interpolations.jl}.
+
+\bibitem{CellListMap}
+L.~Martínez, CellListMap.jl: Efficient and customizable cell list implementation for calculation
+of pairwise particle properties within a cutoff, \emph{Comput.\ Phys.\ Commun.} \textbf{279},
+108452 (2022).
+
+\end{thebibliography}
+
+\end{document}

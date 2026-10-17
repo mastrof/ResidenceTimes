@@ -17,11 +17,12 @@ Salin & Caillol, J. Chem. Phys. 113, 10459 (2000)):
 ==#
 
 """
-    EwaldFar(positions, strengths, L, γ, σ; h=σ/2.4)
+    EwaldFar(positions, strengths, L, γ, σ; h=σ/2.4, m=HalfSupport(8))
 
 Far (smooth) part of the Ewald-split screened field `Σ_j Q_j e^{-r/γ}/r` summed over
 all sources and periodic images in a cubic box of side `L`, sampled on a mesh of
 spacing ≲ `h` and interpolated with periodic cubic B-splines.
+`m` is the half-support of the NUFFT spreading kernel (sets the NUFFT accuracy).
 Call `far(x)` to get the far concentration at `x`, `far_gradient(far, x)` for its gradient.
 """
 struct EwaldFar{I}
@@ -29,9 +30,9 @@ struct EwaldFar{I}
     h::Float64
     L::Float64
 end
-function EwaldFar(positions, strengths, L, γ, σ; h=σ/2.4)
+function EwaldFar(positions, strengths, L, γ, σ; h=σ/2.4, m=HalfSupport(8))
     M = 2ceil(Int, L / (2h)) # even number of mesh nodes (= Fourier modes) per side
-    plan = PlanNUFFT(Float64, (M, M, M); m=HalfSupport(8))
+    plan = PlanNUFFT(Float64, (M, M, M); m)
     set_points!(plan, ntuple(k -> [mod(p[k], L) * 2π / L for p in positions], 3))
     S = Array{ComplexF64}(undef, size(plan))
     exec_type1!(S, plan, collect(Float64, strengths))
