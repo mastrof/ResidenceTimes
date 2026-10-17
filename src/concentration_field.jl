@@ -38,13 +38,14 @@ end
 @kwdef struct CommField <: AbstractChemicalField{3}
     Cb::Float64
     γ::Float64
+    σ::Float64 # Ewald splitting length (μm)
     concentration_field::Function = field_comm
     concentration_gradient::Function = gradient_comm
     concentration_ramp::Function = (_, _) -> zero(Float64)
     diffusivity::Function = (_, _) -> 500.0 # μm²/s
 end
-function CommField(Cb, γ)
-    CommField(; Cb, γ)
+function CommField(Cb, γ, σ)
+    CommField(; Cb, γ, σ)
 end
 
 function field_exp(microbe, model)
@@ -80,15 +81,16 @@ end
 function field_comm(pos::SVector{3,T}, model::ABM) where {T}
     chemo = chemoattractant(model)
     γ = chemo.γ
-    Cb = chemo.Cb
+    σ = chemo.σ
+    rc = abmproperties(model)[:neighborlist].cutoff
     radii = model.phytoplankton_radii
     positions = model.neighborlist.ypositions
     intensities = model.phytoplankton_leakage
-    sum_field = sum(zip(radii, positions, intensities)) do (R, P, Cs)
-        r = max(distance(pos, P, model), R)
-        Cs*R*exp(-(r-R)/γ) / r
+    near = sum(zip(radii, positions, intensities)) do (R, P, Cs)
+        d = distance(pos, P, model)
+        d < rc ? point_strength(R, Cs, γ) * first(ewald_near(max(d, R), γ, σ)) : 0.0
     end
-    return Cb + sum_field
+    return chemo.Cb + near + model.ewald_far(pos)
 end
 
 mutable struct OutCommField
@@ -113,18 +115,27 @@ function CellListMap.reducer(x::OutCommField, y::OutCommField)
     return OutCommField(x.c, x.dc)
 end
 
+# near (short-range) Ewald contribution of phytoplankton j to microbe i;
+# the far contribution is added by `community_field!`
 function comm_out!(x,y,i,j,d2,out::OutCommField,model::ABM)
     P = abmproperties(model)[:neighborlist].ypositions[j]
     R = abmproperties(model)[:phytoplankton_radii][j]
     Cs = abmproperties(model)[:phytoplankton_leakage][j]
     chemo = chemoattractant(model)
     γ = chemo.γ
+    σ = chemo.σ
     d = sqrt(d2)
     dvec = distancevector(P, position(model[i]), model)
-    out.c[i] += _concentration(d, R, Cs, γ)
-    out.dc[i] += _gradient(d, dvec, R, Cs, γ)
+    Q = point_strength(R, Cs, γ)
+    G, dG = ewald_near(max(d, R), γ, σ)
+    out.c[i] += Q * G
+    if d >= R
+        out.dc[i] += Q * dG / d * dvec
+    end
     return out
 end
+
+# exact single-source kernel (no background)
 function _concentration(d, R, Cs, γ)::Float64
     r = max(d, R)
     # no background here!

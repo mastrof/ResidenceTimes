@@ -69,7 +69,7 @@ using Test
     end
 
     @testset "community surface collision" begin
-        # L must exceed 2*field_cutoff = 2*2.5γ = 750 μm (CellListMap unit-cell rule)
+        # L must exceed 2*field_cutoff = 2*3.5σ = 280 μm (CellListMap unit-cell rule)
         model = setup_abm_community(; n=1, L=800.0, Aphy=1e6, mot="RRF",
                                     U=40.0, dt=0.1, rng=Xoshiro(1))
         @test length(model.phytoplankton_radii) ≥ 1
@@ -89,28 +89,52 @@ using Test
     end
 end
 
-@testset "community field" begin
-    model = setup_abm_community(; n=50, L=800.0, Aphy=3e5, α=1.0, mot="RT",
+@testset "community field (Ewald)" begin
+    model = setup_abm_community(; n=100, L=800.0, Aphy=3e5, α=1.0, mot="RT",
                                 U=40.0, dt=0.1, rng=Xoshiro(3))
-    step!(model, 3)
     P = model.neighborlist.ypositions
     Rs = model.phytoplankton_radii
     Qs = model.phytoplankton_leakage
     γ = chemoattractant(model).γ
-    rc = model.neighborlist.cutoff
-    # brute-force sum over the sources within the neighbor-list cutoff (minimum image)
+    L = spacesize(model)[1]
+    rng = Xoshiro(11)
+    # half the probes 0.5–5 μm outside a phytoplankton surface, half anywhere outside
+    outside(x) = all(j -> distance(x, P[j], model) > Rs[j], eachindex(P))
+    for (k, a) in enumerate(allagents(model))
+        if isodd(k)
+            j = rand(rng, eachindex(P))
+            a.pos = normalize(randn(rng, SVector{3,Float64})) * (Rs[j] + 0.5 + 4.5rand(rng)) + P[j]
+            a.pos = mod.(a.pos, L)
+        else
+            x = SVector{3}(rand(rng, 3) .* L)
+            while !outside(x)
+                x = SVector{3}(rand(rng, 3) .* L)
+            end
+            a.pos = x
+        end
+    end
+    ResidenceTimes.community_field!(model)
+    # brute-force sum over all sources and periodic images within 18γ
+    rmax = 18γ
+    n = ceil(Int, rmax / L)
     for a in allagents(model)
         c, g = 0.0, zero(SVector{3,Float64})
         for j in eachindex(P)
-            dvec = distancevector(P[j], position(a), model)
-            d = norm(dvec)
-            d < rc || continue
-            c += ResidenceTimes._concentration(d, Rs[j], Qs[j], γ)
-            g += ResidenceTimes._gradient(d, dvec, Rs[j], Qs[j], γ)
+            d0 = distancevector(P[j], position(a), model)
+            for i1 in -n:n, i2 in -n:n, i3 in -n:n
+                dvec = d0 + L * SVector(i1, i2, i3)
+                d = norm(dvec)
+                d < rmax || continue
+                c += ResidenceTimes._concentration(d, Rs[j], Qs[j], γ)
+                g += ResidenceTimes._gradient(d, dvec, Rs[j], Qs[j], γ)
+            end
         end
-        @test concentration(a, model) ≈ chemoattractant(model).Cb + c
-        @test gradient(a, model) ≈ g
+        @test concentration(a, model) ≈ chemoattractant(model).Cb + c rtol=1e-3
+        @test norm(gradient(a, model) - g) ≤ 1e-2 * norm(g)
     end
+    # the convenience evaluator agrees with the stepping path
+    a = model[2]
+    @test ResidenceTimes.field_comm(position(a), model) ≈ concentration(a, model)
 end
 
 @testset "gradients match finite differences" begin
@@ -123,6 +147,13 @@ end
         fd = SVector(ntuple(k -> (C(norm(x + h*e(k)), R, Cs, γ) - C(norm(x - h*e(k)), R, Cs, γ)) / 2h, 3))
         @test G(norm(x), x, R, Cs, γ) ≈ fd rtol=1e-6
     end
+    # short-range Ewald kernel: derivative, and G_near + G_far → G
+    γ, σ = 150.0, 40.0
+    for r in (1.0, 12.0, 60.0, 120.0)
+        fd = (ResidenceTimes.ewald_near(r + h, γ, σ)[1] - ResidenceTimes.ewald_near(r - h, γ, σ)[1]) / 2h
+        @test ResidenceTimes.ewald_near(r, γ, σ)[2] ≈ fd rtol=1e-6
+    end
+    @test ResidenceTimes.ewald_near(3.5σ, γ, σ)[1] < 1e-5 * exp(-3.5σ/γ) / 3.5σ
     # single-source field
     model = setup_abm(; n=1, L=1000.0, R=5.0, Cs=1.0)
     a = model[1]

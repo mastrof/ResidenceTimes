@@ -55,6 +55,7 @@ function setup_abm_community(;
     PER=0.5, # phytoplankton percent extracellular release
     Cb=0.0, # background chemoattractant (μM)
     γ=150.0, # chemoattractant decay lengthscale (μm)
+    σ=40.0, # Ewald splitting length of the concentration field (μm)
     mot="RT", # motility pattern (RT / RR / RRF)
     dt=0.02, # integration timestep (s)
     U=45.0, # swimming speed (μm/s)
@@ -66,6 +67,7 @@ function setup_abm_community(;
     τm=1.3, # chemotactic memory time (s)
     rng=Xoshiro(1), # seed
 )
+    periodic || throw(ArgumentError("the Ewald community field requires a periodic domain"))
     space = ContinuousSpace(fill(L, SVector{3}); periodic)
     community = generate_community(space, α, Aphy, Rmin, Rmax, PER; rng)
     spatialcfg, phytoplankton_leakage = community
@@ -75,7 +77,7 @@ function setup_abm_community(;
         xpositions=zeros(SVector{3,Float64}, n),
         ypositions=phytoplankton_positions,
         unitcell=spacesize(space),
-        cutoff=2.5γ,
+        cutoff=3.5σ, # erfc(3.5) ≈ 7e-7
         output=OutCommField(zeros(n), zeros(SVector{3,Float64}, n)),
         output_name=:measurements,
         parallel=false
@@ -83,9 +85,11 @@ function setup_abm_community(;
     phytoplankton = Obstacles(space, ObstacleSphere.(phytoplankton_positions, phytoplankton_radii);
         contact=HaltUntilTumble()
     )
-    chemo = CommField(Cb, γ)
+    chemo = CommField(Cb, γ, σ)
+    strengths = point_strength.(phytoplankton_radii, phytoplankton_leakage, γ)
     properties = Dict(
         :neighborlist => system,
+        :ewald_far => EwaldFar(phytoplankton_positions, strengths, L, γ, σ),
         :obstacles => (phytoplankton,),
         :phytoplankton_radii => phytoplankton_radii,
         :phytoplankton_leakage => phytoplankton_leakage,
@@ -106,12 +110,7 @@ function setup_abm_community(;
             behaviors=(Brumley(; chemotactic_precision=Π, gain=Γ, gain_receptor=κ, memory=τm),),
         )
     end
-    abmproperties(model).neighborlist.xpositions .=
-        position.(allagents(model))
-    map_pairwise!(
-        (x,y,i,j,d2,out) -> comm_out!(x,y,i,j,d2,out,model),
-        abmproperties(model)[:neighborlist]
-    )
+    community_field!(model)
     return model
 end
 
@@ -157,8 +156,6 @@ function leaked_concentration(R, PER;
 end
 
 function community_step!(model)
-    nlist = abmproperties(model)[:neighborlist]
-
     # 1. move every swimmer (surface contacts resolved by the obstacles),
     #    then rotational diffusion
     for microbe in allagents(model)
@@ -166,6 +163,19 @@ function community_step!(model)
     end
 
     # 2. recompute concentration + gradient at the new positions
+    community_field!(model)
+
+    # 3. chemotactic update and reorientation
+    for microbe in allagents(model)
+        affect_step!(microbe, model)
+        reorient_step!(microbe, model)
+    end
+end
+
+# Ewald sum at every microbe position: near part over the neighbor list,
+# then the far part from the precomputed mesh
+function community_field!(model)
+    nlist = abmproperties(model)[:neighborlist]
     for i in allids(model)
         nlist.xpositions[i] = position(model[i])
     end
@@ -173,12 +183,14 @@ function community_step!(model)
         (x, y, i, j, d2, out) -> comm_out!(x, y, i, j, d2, out, model),
         nlist
     )
-
-    # 3. chemotactic update and reorientation
-    for microbe in allagents(model)
-        affect_step!(microbe, model)
-        reorient_step!(microbe, model)
+    far = abmproperties(model)[:ewald_far]
+    out = nlist.measurements
+    for i in allids(model)
+        x = position(model[i])
+        out.c[i] += far(x)
+        out.dc[i] += far_gradient(far, x)
     end
+    return model
 end
 
 function make_motility(mot, U, λ)
