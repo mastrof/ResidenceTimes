@@ -2,7 +2,7 @@ export collect_datasets
 
 """
     collect_datasets(folder; rinclude, rexclude, kwargs...)
-Read CSV files in folder and load them as a single dataframe.
+Read CSV and Arrow files in folder and load them as a single dataframe.
 Parameter values in the filenames are included as dataframe columns.
 The `rinclude` and `rexclude` keywords can be used to filter filenames:
 only datasets that match all `rinclude` regexes and none of the `rexclude`
@@ -19,8 +19,8 @@ function collect_datasets(folder;
     rexclude::AbstractVector{Regex}=[r"^\b$"], 
     kwargs...
 )
-    valid_filetypes = [".csv"]
-    load_function = (filename) -> CSV.read(joinpath(folder, filename), DataFrame)
+    valid_filetypes = [".csv", ".arrow"]
+    load_function = (filename) -> read_dataset(joinpath(folder, filename))
     filelist = readdir(folder)
     filter!(filename -> is_valid_file(filename, valid_filetypes), filelist)
     if !isempty(kwargs)
@@ -46,6 +46,14 @@ function collect_datasets(folder;
         datasets[i] = hcat(datasets[i], repeat(config, nrow(datasets[i])))
     end
     vcat(datasets...)
+end
+
+function read_dataset(filename)
+    if endswith(filename, ".arrow")
+        DataFrame(Arrow.Table(filename); copycols=false)
+    else
+        CSV.read(filename, DataFrame)
+    end
 end
 
 is_valid_file(file, valid_filetypes) = 

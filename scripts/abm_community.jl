@@ -4,14 +4,8 @@ using Distributed
 @everywhere begin
     using ResidenceTimes
     using DataFrames
+    using Agents
     using MicrobeAgents
-end
-
-@everywhere begin
-    # used for collecting data
-    x(a::AbstractMicrobe) = position(a)[1]
-    y(a::AbstractMicrobe) = position(a)[2]
-    z(a::AbstractMicrobe) = position(a)[3]
 end
 
 parameters = Dict(
@@ -39,23 +33,28 @@ dicts = dict_list(parameters)
 @everywhere function run_abm(config::Dict)
     @unpack mot, dt, U, λ, L, PER, Cb, α, Aphy = config
     γ = 150
-    model = setup_abm_community(; mot, dt, U, λ, L, α, Aphy, PER, Cb, γ, n=100_000)
     simtime = 60 # minutes
-    nsteps = round(Int, simtime * 60 / dt)
-    c(a) = concentration(model)(a, model) - Cb
-    adata = [x, y, z, c]
-    # do not collect during first 15 minutes equilibration
-    # then collect every 45 seconds
-    eqtime = round(Int, 15*60 / dt)
-    sampletime = round(Int, 45 / dt)
-    when(model, t) = t >= eqtime && t % sampletime == 0
-    adf, = run!(model, nsteps; adata, when)
-    # rename because local functions don't respect names
-    colnames = names(adf)
-    rename!(adf,
-        Symbol(colnames[end]) => :c,
+    # exposure is only accumulated after the first 15 minutes (equilibration)
+    eqtime = 15 # minutes
+    model = setup_abm_community(; mot, dt, U, λ, L, α, Aphy, PER, Cb, γ, n=100_000,
+        teq=eqtime*60
     )
-    adf
+    nsteps = round(Int, simtime * 60 / dt)
+    neq = model.exposure_from
+    # full model state at start, end of equilibration and end of the run;
+    # the fine pass replays selected bacteria from the equilibration checkpoint
+    on_cluster = haskey(ENV, "SCRATCH")
+    statefile(tag) = datadir(
+        "comm_7classes_states",
+        savename("state-$tag", config, "jls");
+        on_cluster
+    )
+    save_checkpoint(statefile("init"), model)
+    step!(model, neq)
+    save_checkpoint(statefile("eq"), model)
+    step!(model, nsteps - neq)
+    save_checkpoint(statefile("end"), model)
+    DataFrame(id=collect(allids(model)), exposure=model.exposure)
 end
 
 pmap(dicts) do config
@@ -63,7 +62,7 @@ pmap(dicts) do config
     data = run_abm(config)
     on_cluster = haskey(ENV, "SCRATCH")
     fileout = datadir(
-        "comm_7classes",
+        "comm_7classes_exposure",
         savename("comm", config, "csv");
         on_cluster
     )

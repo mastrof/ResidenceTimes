@@ -3,6 +3,7 @@ authors = ["Riccardo Foffi"]
 
 [deps]
 Agents = "46ada45e-f475-11e8-01d0-f70cc89e6671"
+Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
 BubbleBath = "06490a66-c478-4593-a275-4b14021bccc5"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
@@ -25,6 +26,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MicrobeAgents = "b17a4bac-8667-4a2d-84f7-1883ae0b8dbb"
 NonuniformFFTs = "cd96f58b-6017-4a02-bb9e-f4d81626177f"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"

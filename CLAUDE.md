@@ -65,6 +65,19 @@ external drive (`/media/Elements/...`) after processing — that path is hardcod
 2. **Process** (`scripts/process_simulations*.jl`): re-load raw CSVs, compute per-individual
    **exposure** (`combine(groupby(df,:id), :c => sum)`) and **radial distribution functions** (KDE of
    `r` for a given `Cs` divided by the matching `Cs=0` control). Writes to `data/exposure`, `data/rdf`.
+   The **community** pipeline is different, since full per-step output is too large:
+   - `abm_community.jl` (coarse pass) stores only each bacterium's exposure, accumulated at every
+     step after equilibration (`teq` keyword, model property `:exposure`, in μM·s), to
+     `comm_7classes_exposure/`, plus full-model checkpoints (`save_checkpoint`, plain
+     `Serialization`) at start / end of equilibration / end of run in `comm_7classes_states/`.
+   - `community_best-worst-performers.jl` picks the 1000 lowest, 1000 highest and 1000 random ids
+     → `comm_7classes_selection/`.
+   - `abm_community_track-tails.jl` (fine pass) reloads the equilibration checkpoint, replays the
+     run recording the selected ids at every step (Arrow, `comm_7classes_replay/`), and checks
+     bitwise (`isidentical`) that it ends on the stored final state (Arrow metadata
+     `replay_identical`). Checkpoints are only readable with the same Julia/package versions:
+     don't update the Manifest between coarse and fine pass.
+   - Older analysis scripts still read the previous layout (`comm_7classes`, `_ids`, `_tracks`).
 3. **Plot** (`scripts/plot_*.jl`): load processed CSVs with `collect_datasets` and render with Makie.
 
 `src/reader.jl`'s `collect_datasets(folder; rinclude, rexclude, key=val...)` is the main loader: it

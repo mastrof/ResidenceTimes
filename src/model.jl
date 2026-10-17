@@ -65,6 +65,7 @@ function setup_abm_community(;
     Γ=50.0, # chemotactic gain
     κ=50.0, # receptor gain (1/μM)
     τm=1.3, # chemotactic memory time (s)
+    teq=0.0, # equilibration time (s) before exposure starts accumulating
     rng=Xoshiro(1), # seed
 )
     periodic || throw(ArgumentError("the Ewald community field requires a periodic domain"))
@@ -94,6 +95,8 @@ function setup_abm_community(;
         :phytoplankton_radii => phytoplankton_radii,
         :phytoplankton_leakage => phytoplankton_leakage,
         :chemoattractant => chemo,
+        :exposure => zeros(n),
+        :exposure_from => round(Int, teq/dt),
     )
     model = StandardABM(microbe_type(mot), space, dt;
         properties,
@@ -164,6 +167,7 @@ function community_step!(model)
 
     # 2. recompute concentration + gradient at the new positions
     community_field!(model)
+    accumulate_exposure!(model)
 
     # 3. chemotactic update and reorientation
     for microbe in allagents(model)
@@ -193,13 +197,35 @@ function community_field!(model)
     return model
 end
 
+# time-integrated excess concentration (μM·s) experienced by each microbe,
+# summed over the states reached after the first `exposure_from` steps
+function accumulate_exposure!(model)
+    abmtime(model) < abmproperties(model)[:exposure_from] && return model
+    exposure = abmproperties(model)[:exposure]
+    c = abmproperties(model)[:neighborlist].measurements.c
+    dt = abmtimestep(model)
+    for i in allids(model)
+        exposure[i] += dt * c[i]
+    end
+    return model
+end
+
 function make_motility(mot, U, λ)
     if mot == "RT"
         RunTumble([U], 1/λ, Isotropic(3))
     elseif mot == "RR"
-        RunReverse([U], 1/λ, [U], 1/λ)
+        # keyword form: the positional RunReverse method of MicrobeAgents
+        # does not forward keyword arguments
+        RunReverse(;
+            run_speed_forward=[U], run_duration_forward=1/λ,
+            run_speed_backward=[U], run_duration_backward=1/λ,
+            angle=Normal(-π, π/15),
+        )
     elseif mot == "RRF"
-        RunReverseFlick([U], 1/λ, [U], 1/λ)
+        RunReverseFlick([U], 1/λ, [U], 1/λ;
+            reverse_angle=Normal(-π, π/15),
+            flick_angle=MixtureModel([Normal(π/2,π/6), Normal(-π/2,π/6)]),
+        )
     else
         throw(ArgumentError("unknown motility pattern $mot"))
     end

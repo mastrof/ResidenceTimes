@@ -4,5 +4,9 @@ function DrWatson._wsave(
     args...;
     kwargs...
 )
-    CSV.write(filename, data; kwargs...)
+    if endswith(filename, ".arrow")
+        Arrow.write(filename, data; kwargs...)
+    else
+        CSV.write(filename, data; kwargs...)
+    end
 end

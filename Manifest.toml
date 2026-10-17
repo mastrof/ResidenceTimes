@@ -2,7 +2,7 @@
 
 julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "da983dc59e948bcf7585113f62905ff0f05a3132"
+project_hash = "1161e5b05e4459476907951d338755e09eb3318b"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -141,6 +141,18 @@ git-tree-sha1 = "ca8c5218f18c5318827fdb1881f370249610f8d2"
 uuid = "1dc0ca97-c5ce-4e77-ac6d-c576ac9d7f27"
 version = "0.2.7"
 
+[[deps.Arrow]]
+deps = ["ArrowTypes", "BitIntegers", "CodecLz4", "CodecZstd", "ConcurrentUtilities", "DataAPI", "Dates", "EnumX", "Mmap", "PooledArrays", "SentinelArrays", "StringViews", "Tables", "TimeZones", "TranscodingStreams", "UUIDs"]
+git-tree-sha1 = "4a69a3eadc1f7da78d950d1ef270c3a62c1f7e01"
+uuid = "69666777-d1a9-59fb-9406-91d4454c9d45"
+version = "2.8.1"
+
+[[deps.ArrowTypes]]
+deps = ["Sockets", "UUIDs"]
+git-tree-sha1 = "404265cd8128a2515a81d5eae16de90fdef05101"
+uuid = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
+version = "2.3.0"
+
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 version = "1.11.0"
@@ -226,6 +238,12 @@ git-tree-sha1 = "bbe1079eecf9c9fbb52765193ad2bae27ae09bc8"
 uuid = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
 version = "0.1.10"
 
+[[deps.BitIntegers]]
+deps = ["Random"]
+git-tree-sha1 = "091d591a060e43df1dd35faab3ca284925c48e46"
+uuid = "c3b6d118-76ef-56ca-8cc7-ebb389d030a1"
+version = "0.3.7"
+
 [[deps.BubbleBath]]
 deps = ["LinearAlgebra", "Random"]
 git-tree-sha1 = "f0c51786db6be8c3a957b6afb67e7707995206b8"
@@ -303,6 +321,12 @@ weakdeps = ["SparseArrays"]
 git-tree-sha1 = "1c52c8e2673edc030191177ff1aee42d25149acb"
 uuid = "ae650224-84b6-46f8-82ea-d812ca08434e"
 version = "3.2.0"
+
+[[deps.CodecLz4]]
+deps = ["Lz4_jll", "TranscodingStreams"]
+git-tree-sha1 = "d58afcd2833601636b48ee8cbeb2edcb086522c2"
+uuid = "5ba52731-8f18-5e0d-9241-30f10d1ec561"
+version = "0.4.6"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -878,14 +902,11 @@ version = "0.3.1"
 git-tree-sha1 = "8f3d257792a522b4601c24a577954b0a8cd7334d"
 uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
 version = "1.4.5"
+weakdeps = ["ArrowTypes", "Parsers"]
 
     [deps.InlineStrings.extensions]
     ArrowTypesExt = "ArrowTypes"
     ParsersExt = "Parsers"
-
-    [deps.InlineStrings.weakdeps]
-    ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
-    Parsers = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 
 [[deps.IntegerMathUtils]]
 git-tree-sha1 = "4c1acff2dc6b6967e7e750633c50bc3b8d83e617"
@@ -1207,6 +1228,12 @@ git-tree-sha1 = "f00544d95982ea270145636c181ceda21c4e2575"
 uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 version = "1.2.0"
 
+[[deps.Lz4_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "191686b1ac1ea9c89fc52e996ad15d1d241d1e33"
+uuid = "5ced341a-0733-55b8-9ab6-a4889d929147"
+version = "1.10.1+0"
+
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "oneTBB_jll"]
 git-tree-sha1 = "282cadc186e7b2ae0eeadbd7a4dffed4196ae2aa"
@@ -1292,6 +1319,12 @@ version = "1.2.0"
 [[deps.Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 version = "1.11.0"
+
+[[deps.Mocking]]
+deps = ["Compat", "ExprTools"]
+git-tree-sha1 = "2c140d60d7cb82badf06d8783800d0bcd1a7daa2"
+uuid = "78c3b35d-d492-501b-9361-3d52fe80e533"
+version = "0.8.1"
 
 [[deps.ModernGL]]
 deps = ["Libdl"]
@@ -1943,6 +1976,11 @@ git-tree-sha1 = "d05693d339e37d6ab134c5ab53c29fce5ee5d7d5"
 uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
 version = "0.4.4"
 
+[[deps.StringViews]]
+git-tree-sha1 = "f2dcb92855b31ad92fe8f079d4f75ac57c93e4b8"
+uuid = "354b36f9-a18e-4713-926e-db85100087ba"
+version = "1.3.7"
+
 [[deps.StructArrays]]
 deps = ["ConstructionBase", "DataAPI", "Tables"]
 git-tree-sha1 = "ad8002667372439f2e3611cfd14097e03fa4bccd"
@@ -1974,6 +2012,12 @@ version = "7.7.0+0"
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 version = "1.0.3"
+
+[[deps.TZJData]]
+deps = ["Artifacts"]
+git-tree-sha1 = "9ecd8b67004162f1651bcea9ee7cd0fdf87e6c26"
+uuid = "dc5dba14-91b3-4cab-a142-028a31da12f7"
+version = "1.11.0+2026e"
 
 [[deps.TableTraits]]
 deps = ["IteratorInterfaceExtensions"]
@@ -2018,6 +2062,16 @@ deps = ["CodecZstd", "ColorTypes", "DataStructures", "DocStringExtensions", "Fil
 git-tree-sha1 = "9ca5f1f2d42f80df4b8c9f6ab5a64f438bbd9976"
 uuid = "731e570b-9d59-4bfa-96dc-6df516fadf69"
 version = "0.11.9"
+
+[[deps.TimeZones]]
+deps = ["Artifacts", "Dates", "Downloads", "InlineStrings", "Mocking", "Printf", "Scratch", "TZJData", "Unicode", "p7zip_jll"]
+git-tree-sha1 = "ce006b900d4b2c0d839d41c0ee365581c3048724"
+uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
+version = "1.22.3"
+weakdeps = ["RecipesBase"]
+
+    [deps.TimeZones.extensions]
+    TimeZonesRecipesBaseExt = "RecipesBase"
 
 [[deps.TimerOutputs]]
 deps = ["ExprTools", "PrettyTables", "Printf", "Tables"]

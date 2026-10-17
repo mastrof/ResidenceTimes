@@ -166,3 +166,36 @@ end
         @test ResidenceTimes.gradient_exp(a, model) ≈ fd rtol=1e-6
     end
 end
+
+@testset "community exposure and checkpoints" begin
+    kw = (; n=200, L=800.0, Aphy=1e6, mot="RRF", U=40.0, dt=0.1)
+
+    @testset "exposure accumulates only after equilibration" begin
+        model = setup_abm_community(; kw..., teq=0.3, rng=Xoshiro(1))
+        @test model.exposure_from == 3
+        step!(model, 3)
+        @test all(iszero, model.exposure)
+        expected = zeros(kw.n)
+        for _ in 1:4
+            step!(model, 1)
+            expected .+= kw.dt .* model.neighborlist.measurements.c
+        end
+        @test model.exposure == expected
+        @test all(>(0), model.exposure)
+    end
+
+    @testset "restart from checkpoint is bitwise identical" begin
+        model = setup_abm_community(; kw..., teq=0.2, rng=Xoshiro(1))
+        step!(model, 3)
+        file = save_checkpoint(joinpath(mktempdir(), "ckpt", "state.jls"), model)
+        step!(model, 3)
+        restarted = load_checkpoint(file)
+        @test !isidentical(model, restarted)
+        step!(restarted, 3)
+        @test isidentical(model, restarted)
+        # a 1-ulp change in a single coordinate is detected
+        a = restarted[1]
+        a.pos = SVector(nextfloat(a.pos[1]), a.pos[2], a.pos[3])
+        @test !isidentical(model, restarted)
+    end
+end
