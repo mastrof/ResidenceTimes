@@ -165,6 +165,16 @@ function generate_community(space, α, Aphy, Rmin, Rmax, PER; rng=Xoshiro(1))
 end
 
 using Unitful
+function leakage_rate(R, PER;
+    nC=5,
+    μ=1.0*1u"d^-1",
+    b=1.67e-4u"mol/cm^2.28",
+    D=500u"μm^2/s"
+)
+    Ru = R * 1u"μm"
+    L = b * Ru^2.28 * μ * PER / nC
+    ustrip(L |> u"pmol/hr")
+end
 function leaked_concentration(R, PER;
     nC=5,
     μ=1.0*1u"d^-1",
@@ -172,7 +182,7 @@ function leaked_concentration(R, PER;
     D=500u"μm^2/s"
 )
     Ru = R * 1u"μm"
-    L = b * Ru^2.28 * μ * PER * nC
+    L = b * Ru^2.28 * μ * PER / nC
     Cs = L / (4π*D*Ru) |> u"μM"
     ustrip(Cs)
 end
