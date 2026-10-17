@@ -6,6 +6,7 @@ grazing a sphere. Run via the julia-mcp `julia_eval` tool.
 
 using DrWatson
 @quickactivate "ResidenceTimes"
+push!(LOAD_PATH, projectdir("analysis")) # Makie lives in the analysis workspace project
 using ResidenceTimes
 using MicrobeAgents
 using Agents

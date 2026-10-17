@@ -49,6 +49,17 @@ in a project-activated session instead:
 include("test/runtests.jl")
 ```
 
+### Environments (Julia 1.13, workspace, pinned)
+
+The project requires Julia 1.13. `Project.toml` declares a workspace with one sub-project,
+`analysis/`, holding the plotting-only deps (GLMakie, CairoMakie, Colors, LaTeXStrings); both share the
+root `Manifest.toml`. Production (cluster) uses the root project only, so Makie is never loaded there.
+Plot scripts run from the root project and do `push!(LOAD_PATH, projectdir("analysis"))` after
+`@quickactivate`. Add plotting deps with `Pkg.activate("analysis"); Pkg.add(...)`.
+Every registry package in the manifest is pinned (`Pkg.pin`); `Pkg.pin(all_pkgs=true)` fails on 1.13
+because of the URL-tracked MicrobeAgents, so pin by name/uuid instead (MicrobeAgents is fixed by `[sources]`).
+Checkpoints from Julia 1.11 runs are not readable on 1.13.
+
 ### Cluster vs. local
 
 `src/utils.jl` overrides `DrWatson.datadir`: when the `SCRATCH` env var is set (cluster), output goes

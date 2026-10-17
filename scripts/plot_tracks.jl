@@ -1,5 +1,6 @@
 using DrWatson
 @quickactivate "ResidenceTimes"
+push!(LOAD_PATH, projectdir("analysis")) # Makie lives in the analysis workspace project
 using ResidenceTimes
 using CSV
 using DataFrames
