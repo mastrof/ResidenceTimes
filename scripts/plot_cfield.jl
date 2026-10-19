@@ -12,6 +12,8 @@ using DataFrames
 using LinearAlgebra
 using StatsBase
 using KernelDensity
+using StaticArrays
+using Unitful
 using LaTeXStrings
 using GLMakie
 set_theme!(theme_latexfonts();
@@ -92,7 +94,7 @@ let
     xs = (0, 960) .+ 20
     ys = (0, 720) .+ 0
     zs = (0, 300)
-    δ = 2
+    δ = 10
     xrng = range(xs...; step=δ)
     yrng = range(ys...; step=δ)
     z = (zs[1]+zs[2])/2
@@ -103,7 +105,7 @@ let
         y = yrng[j]
         f[CI] = field(SVector(x, y, z))
     end
-    hm = heatmap!(ax3, xrng, yrng, f.*1e3)
+    hm = contourf!(ax3, xrng, yrng, f.*1e3; levels=25)
     Colorbar(fig[2:3,7], hm;
         label="nM"
     )
