@@ -1,4 +1,4 @@
-export setup_abm, setup_abm_community
+export setup_abm, setup_abm_community, setup_abm_community_Δche
 export generate_community
 
 function setup_abm(;
@@ -120,6 +120,9 @@ function setup_abm_community(;
     community_field!(model)
     return model
 end
+
+setup_abm_community_Δche(; kwargs...) =
+    setup_abm_community(κ=0.0, Γ=0.0; kwargs...)
 
 using IterTools: partition
 using StatsBase: geomean
