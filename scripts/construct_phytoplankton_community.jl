@@ -1,6 +1,7 @@
 using DrWatson
 @quickactivate "ResidenceTimes"
 using ResidenceTimes
+using ResidenceTimes: leaked_concentration
 using CSV
 using DataFrames
 using Random
@@ -8,51 +9,57 @@ using StaticArrays
 using Agents: ContinuousSpace
 import BubbleBath
 
-# reproduce community used in experiments using same seed
-# include also periodic images at each boundary of the domain
-function commstructure(L, α, Aphy; Rmin=0.65, Rmax=10.0, rng=Xoshiro(1))
+# Reproduce the phytoplankton community of the community simulations (same generator,
+# same seed, same defaults as `setup_abm_community`) and write, for every configuration:
+#   1. phytoplankton_<params>.csv   position, radius and leakage of every cell
+#      (the 6 face-adjacent periodic images are included, flagged by `image=true`)
+#   2. cfield_<params>.jld2         the interpolated concentration field; load it with
+#          field = load_community_field(file);  field(x);  field_gradient(field, x)
+
+# must match the defaults of setup_abm_community and the `abm_community.jl` script
+# (PER is read from the simulation filenames)
+const Rmin, Rmax = 0.65, 10.0
+const Cb = 0.0
+const γ = 150.0
+const σ = 40.0
+const SEED = 1
+
+function commstructure(L, α, Aphy, PER; rng=Xoshiro(SEED))
     space = ContinuousSpace(fill(L, SVector{3}); periodic=true)
-    comm = generate_community(space, α, Aphy, Rmin, Rmax, 0; rng)[1]
-    # periodic images
-    offsets = filter(
-        x -> sum(abs.(x))==1,
-        collect(Iterators.product(-1:1, -1:1, -1:1))
-    )
-    comm_images = [deepcopy(comm) for _ in offsets]
-    for i in eachindex(offsets)
-        d = offsets[i]
-        for j in eachindex(comm_images[i])
-            p = comm_images[i][j].pos
-            r = comm_images[i][j].radius
-            comm_images[i][j] = BubbleBath.Sphere(p .+ (d.*L), r)
-        end
-    end
-    c = [comm; comm_images...]
-    ids = repeat(eachindex(comm), length(offsets)+1)
-    getx(s) = s.pos[1]
-    gety(s) = s.pos[2]
-    getz(s) = s.pos[3]
-    getr(s) = s.radius
-    DataFrame(;
-        id=ids,
-        x=getx.(c),
-        y=gety.(c),
-        z=getz.(c),
-        R=getr.(c),
-    )
+    generate_community(space, α, Aphy, Rmin, Rmax, PER; rng)
 end
 
-filenames = readdir(datadir("comm_7classes_tracks"))
+function commtable(spatialcfg, leakage, L)
+    offsets = filter(x -> sum(abs.(x)) == 1, collect(Iterators.product(-1:1, -1:1, -1:1)))
+    shifts = [(0, 0, 0); offsets]
+    ids = eachindex(spatialcfg)
+    reduce(vcat, map(shifts) do d
+        DataFrame(;
+            id=collect(ids),
+            x=[s.pos[1] + d[1]*L for s in spatialcfg],
+            y=[s.pos[2] + d[2]*L for s in spatialcfg],
+            z=[s.pos[3] + d[3]*L for s in spatialcfg],
+            R=[s.radius for s in spatialcfg],
+            Cs=leakage,
+            image=fill(d != (0, 0, 0), length(ids)),
+        )
+    end)
+end
+
+filenames = readdir(datadir("comm_7classes_exposure"))
 dicts = getindex.(parse_savename.(filenames), 2)
-ks = ["Aphy", "L", "α"]
+ks = ["Aphy", "L", "α", "PER"]
 pars = unique(map(d -> get.(Ref(d), ks, nothing), dicts))
 
-for i in eachindex(pars)
-    p = pars[i]
+for p in pars
     d = Dict(ks .=> p)
-    comm = commstructure(d["L"], d["α"], d["Aphy"])
-    CSV.write(
-        datadir(savename("phytoplankton", d, "csv")),
-        comm
+    L = d["L"]
+    spatialcfg, leakage = commstructure(L, d["α"], d["Aphy"], d["PER"])
+    CSV.write(datadir(savename("phytoplankton", d, "csv")), commtable(spatialcfg, leakage, L))
+    field = CommunityField(
+        getproperty.(spatialcfg, :pos), getproperty.(spatialcfg, :radius), leakage,
+        L, γ, σ, Cb
     )
+    save_community_field(datadir(savename("cfield", d, "jld2")), field)
+    @info "wrote community" d length(spatialcfg)
 end

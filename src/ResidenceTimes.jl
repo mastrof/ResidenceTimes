@@ -10,6 +10,7 @@ using CSV
 using Arrow
 using Serialization: serialize, deserialize
 using DataFrames
+using JLD2
 using Distributions
 using Random
 using SpecialFunctions: erfc
@@ -22,6 +23,7 @@ include("wsave.jl")
 include("reader.jl")
 include("ewald.jl")
 include("concentration_field.jl")
+include("field_io.jl")
 include("encounter.jl")
 include("model.jl")
 include("checkpoint.jl")

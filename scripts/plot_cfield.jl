@@ -2,7 +2,11 @@ using DrWatson
 @quickactivate "ResidenceTimes"
 push!(LOAD_PATH, projectdir("analysis")) # Makie lives in the analysis workspace project
 using ResidenceTimes
-using ResidenceTimes: leaked_concentration, leakage_rate
+conc = ResidenceTimes._concentration
+const γ = 150.0
+const Rmin = 0.65
+const Rmax = 10.0
+using IterTools: partition
 using CSV
 using DataFrames
 using LinearAlgebra
@@ -34,37 +38,32 @@ set_theme!(theme_latexfonts();
     )
 )
 it(s) = rich(s; font=:italic)
-
 dist(a, b) = hypot((a.-b)...)
-
-conc = ResidenceTimes._concentration
-γ = 150.0
 
 filenames = filter(startswith("phytoplankton"), readdir(datadir()))
 fname = filenames[1]
-comm = CSV.read(datadir(fname), DataFrame)[1:301,:]
-transform!(comm,
-    :R => ByRow(R -> leaked_concentration(R, 0.3)) => :Cs,
-    :R => ByRow(R -> leakage_rate(R, 0.3)) => :L,
-)
+comm = CSV.read(datadir(fname), DataFrame)#[1:301,:]
+field = load_community_field(datadir(replace(fname, "phytoplankton"=>"cfield", "csv"=>"jld2")))
 
 let
     fig = Figure(size=(700,400))
     ax1 = Axis(fig[1:3,1:3];
         xlabel=rich(it("r"), " (μm)"),
-        ylabel=rich(it("C(r)"), " (μM)"),
+        ylabel=rich(it("C(r)"), " (nM)"),
     )
     r = range(0, 75; length=1000)
     Rs = unique(comm.R)
-    for R in Rs
-        Cs = leaked_concentration(R, 0.3)
-        c = conc.(r[r.>R], R, Cs, γ)
+    Cs = unique(comm.Cs)
+    for i in eachindex(Rs)
+        R = Rs[i]
+        C = Cs[i]
+        c = conc.(r[r.>R], R, C, γ) .* 1e3
         lines!(ax1, r[r.>R], c; label=string(R))
     end
-    axislegend(ax1, "radius (μm)"; position=:rt)
+    axislegend(ax1, "Cell radius (μm)"; position=:rt)
     #
     ax2 = Axis(fig[1,4:6];
-        xlabel=rich("radius (μm)"),
+        xlabel=rich("Cell radius (μm)"),
         ylabel=rich("cells/mL"),
         xticks=1:2:7,
         yticks=3:5,
@@ -72,26 +71,28 @@ let
     )
     V = parse_savename(fname)[2]["L"]^3 # μm^3
     V *= 1e-12 # μm^3 → mL
-    N = [count(==(R), comm.R) for R in Rs] ./ V
-    barplot!(ax2, Rs, log10.(N);
-        color=:grey,
-        width=Rs,
-        fillto=2.8,
-    )
+    N = [count(==(R), comm[.~comm.image, :R]) for R in Rs] ./ V
+    Rbins = reverse(collect(partition(logrange(Rmin, Rmax; length=8), 2, 1)))
+    for i in eachindex(N)
+        r1, r2 = Rbins[i+1]
+        dr = r2-r1
+        r = (r1+r2)/2
+        n = N[i]
+        barplot!(ax2, [r], [log10(n)];
+            color=Makie.wong_colors()[i],
+            width=2dr,
+            fillto=2.8
+        )
+    end
     ylims!(ax2, 2.8, nothing)
     #
     ax3 = Axis(fig[2:3,4:6])
     hidedecorations!(ax3)
     hidespines!(ax3)
-    xs = (0, 800) .+ 20
-    ys = (0, 600) .+ 0
+    xs = (0, 960) .+ 20
+    ys = (0, 720) .+ 0
     zs = (0, 300)
-    subcomm = subset(comm,
-        :x => ByRow(x -> xs[1]<x<xs[2]),
-        :y => ByRow(y -> ys[1]<y<ys[2]),
-        :z => ByRow(z -> zs[1]<z<zs[2]),
-    )
-    δ = 5
+    δ = 2
     xrng = range(xs...; step=δ)
     yrng = range(ys...; step=δ)
     z = (zs[1]+zs[2])/2
@@ -100,12 +101,7 @@ let
         i, j = CI.I
         x = xrng[i]
         y = yrng[j]
-        for phyto in eachrow(subcomm)
-            d = dist([x,y,z], [phyto.x, phyto.y, phyto.z])
-            R = phyto.R
-            Cs = phyto.Cs
-            f[CI] += conc(d, R, Cs, γ)
-        end
+        f[CI] = field(SVector(x, y, z))
     end
     hm = heatmap!(ax3, xrng, yrng, f.*1e3)
     Colorbar(fig[2:3,7], hm;

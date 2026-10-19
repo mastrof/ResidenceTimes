@@ -29,6 +29,11 @@ struct EwaldFar{I}
     itp::I
     h::Float64
     L::Float64
+    mesh::Array{Float64,3} # far field at the nodes x = (i-1)h
+end
+function EwaldFar(mesh::Array{Float64,3}, L)
+    itp = extrapolate(interpolate(mesh, BSpline(Cubic(Periodic(OnCell())))), Periodic())
+    EwaldFar(itp, Float64(L) / size(mesh, 1), Float64(L), mesh)
 end
 function EwaldFar(positions, strengths, L, γ, σ; h=σ/2.4, m=HalfSupport(8))
     M = 2ceil(Int, L / (2h)) # even number of mesh nodes (= Fourier modes) per side
@@ -48,8 +53,7 @@ function EwaldFar(positions, strengths, L, γ, σ; h=σ/2.4, m=HalfSupport(8))
     S[:, M÷2+1, :] .= 0
     S[:, :, M÷2+1] .= 0
     mesh = brfft(S, M, 1:3) # far field at nodes x = (i-1)h
-    itp = extrapolate(interpolate(mesh, BSpline(Cubic(Periodic(OnCell())))), Periodic())
-    EwaldFar(itp, L / M, Float64(L))
+    EwaldFar(mesh, L)
 end
 @inline _mesh_coords(far::EwaldFar, x) = ntuple(k -> mod(x[k], far.L) / far.h + 1, 3)
 (far::EwaldFar)(x)::Float64 = far.itp(_mesh_coords(far, x)...)
